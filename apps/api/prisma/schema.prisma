@@ -32,6 +32,8 @@ model User {
   role         Role     @default(CUSTOMER)
   emailVerifiedAt DateTime?
   image        String?
+  resetToken   String?
+  resetExpires DateTime?
   createdAt    DateTime @default(now())
   orders       Order[]
   licenses     License[]
