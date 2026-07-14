@@ -7,14 +7,14 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} SourceBan. All rights reserved.
           </span>
           <div className="mt-4 flex flex-col items-center sm:mt-0 sm:flex-row sm:space-x-4">
-            <a href="#" className="text-sm text-gray-600 hover:text-gray-900">
-              Quy định
+            <a href="/" className="text-sm text-gray-600 hover:text-gray-900">
+              Trang chủ
             </a>
-            <a href="#" className="text-sm text-gray-600 hover:text-gray-900">
-              Bảo mật
+            <a href="/products" className="text-sm text-gray-600 hover:text-gray-900">
+              Sản phẩm
             </a>
-            <a href="#" className="text-sm text-gray-600 hover:text-gray-900">
-              Liên hệ
+            <a href="/api/auth/signin" className="text-sm text-gray-600 hover:text-gray-900">
+              Đăng nhập
             </a>
           </div>
         </div>
