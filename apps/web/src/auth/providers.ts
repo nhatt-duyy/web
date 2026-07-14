@@ -16,7 +16,7 @@ export const providers = [
       });
       if (!res.ok) return null;
       const { access_token } = await res.json();
-      return { id: 'local', email: creds.email as string, accessToken: access_token };
+      return { id: creds.email as string, email: creds.email as string, accessToken: access_token };
     },
   }),
 ];
