@@ -19,7 +19,7 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: { email: dto.email, name: dto.name, passwordHash, role: 'CUSTOMER' },
     });
-    return this.signToken(user.id, user.email, user.role);
+    return this.signToken(user);
   }
 
   async login(dto: { email: string; password: string }) {
@@ -27,7 +27,7 @@ export class AuthService {
     if (!user || !user.passwordHash) throw new UnauthorizedException('Sai thông tin');
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
     if (!ok) throw new UnauthorizedException('Sai thông tin');
-    return this.signToken(user.id, user.email, user.role);
+    return this.signToken(user);
   }
 
   async forgotPassword(email: string) {
@@ -79,7 +79,13 @@ export class AuthService {
     return { success: true };
   }
 
-  private signToken(id: string, email: string, role: string) {
-    return { access_token: this.jwt.sign({ sub: id, email, role }) };
+  private signToken(user: { id: string; email: string; name: string | null; role: string }) {
+    const name = user.name ?? '';
+    return {
+      access_token: this.jwt.sign({ sub: user.id, email: user.email, role: user.role }),
+      // Trả kèm user để admin SPA (AuthContext) lấy ngay thông tin mà không cần gọi thêm.
+      // Web NextAuth chỉ đọc access_token nên thêm field này vô hại.
+      user: { id: user.id, email: user.email, name, role: user.role },
+    };
   }
 }

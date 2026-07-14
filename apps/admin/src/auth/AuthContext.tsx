@@ -44,7 +44,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (email: string, password: string) => {
     try {
       const response = await apiClient.post('/auth/login', { email, password });
-      const { accessToken, user } = response.data;
+      // Backend trả { access_token, user } — access_token cho web tương thích, user để hiển thị.
+      const { access_token: accessToken, user } = response.data;
       setToken(accessToken);
       setUser(user);
       localStorage.setItem('admin_token', accessToken);
