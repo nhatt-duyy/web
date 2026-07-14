@@ -1,4 +1,5 @@
 // apps/api/src/main.ts
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
