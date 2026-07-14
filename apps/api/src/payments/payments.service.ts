@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PayOS } from '@payos/node';
 import * as crypto from 'crypto';
 import { OrdersService } from '../orders/orders.service';
+import { EmailService } from '../common/email/email.service';
 
 @Injectable()
 export class PaymentsService {
@@ -13,6 +14,7 @@ export class PaymentsService {
   constructor(
     private readonly configService: ConfigService,
     private readonly ordersService: OrdersService,
+    private readonly emailService: EmailService,
   ) {
     const clientId = this.configService.get<string>('PAYOS_CLIENT_ID');
     const apiKey = this.configService.get<string>('PAYOS_API_KEY');
@@ -135,6 +137,15 @@ export class PaymentsService {
     if (body.code === '00') {
       this.logger.log(`Thanh toán thành công cho đơn hàng ${order.id}, đang xử lý...`);
       await this.ordersService.confirmPayment(order.id);
+      // Send payment success email
+      try {
+        const userEmail = (order as any).user?.email;
+        if (userEmail) {
+          await this.emailService.sendPaymentSuccess(userEmail, order);
+        }
+      } catch (error: any) {
+        this.logger.error('Failed to send payment success email:', error);
+      }
     } else {
       this.logger.log(`Thanh toán không thành công (code: ${body.code}) cho đơn hàng ${order.id}`);
       // Tùy chọn: cập nhật статут order thành FAILED
