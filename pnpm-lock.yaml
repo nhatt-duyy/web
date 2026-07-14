@@ -44,6 +44,9 @@ importers:
       '@nestjs/passport':
         specifier: ^11.0.0
         version: 11.0.5(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(passport@0.7.0)
+      '@payos/node':
+        specifier: ^2.0.5
+        version: 2.0.5
       '@prisma/client':
         specifier: ^5.20.0
         version: 5.22.0(prisma@5.22.0)
@@ -970,6 +973,9 @@ packages:
 
   '@panva/hkdf@1.2.1':
     resolution: {integrity: sha512-6oclG6Y3PiDFcoyk8srjLfVKyMfVCKJ27JwNPViuXziFpmdz+MZnZN/aKY0JGXgYuO/VghU0jcOAZgWXZ1Dmrw==}
+
+  '@payos/node@2.0.5':
+    resolution: {integrity: sha512-y2dRfqVMerbBr0gapFqNA+QwzJmhC0Hi0+IaXhOsXEOBRjIe9ZgeFqI3JBF3mXSM3YSf5HAjTAAk2XYtCvMpBQ==}
 
   '@prisma/client@5.22.0':
     resolution: {integrity: sha512-M0SVXfyHnQREBKxCgyo7sffrKttwE6R8PMq330MIUF0pTwjUhLbW84pFDlf06B27XyCR++VtjugEnIHdr07SVA==}
@@ -4117,6 +4123,8 @@ snapshots:
     optional: true
 
   '@panva/hkdf@1.2.1': {}
+
+  '@payos/node@2.0.5': {}
 
   '@prisma/client@5.22.0(prisma@5.22.0)':
     optionalDependencies:

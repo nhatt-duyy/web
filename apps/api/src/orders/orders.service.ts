@@ -3,7 +3,8 @@ import { PrismaService } from '../database/prisma.service';
 import { EmailService } from '../common/email/email.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
-import { OrderStatus, PaymentProvider, Product } from '@prisma/client';
+import { OrderStatus, PaymentProvider, Product, License } from '@prisma/client';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class OrdersService {
@@ -93,7 +94,7 @@ export class OrdersService {
       if (user?.email) {
         await this.emailService.sendOrderConfirmation(user.email, order);
       }
-    } catch (error) {
+    } catch (error: any) {
       // Log the error but don't fail the order creation
       console.error('Failed to send order confirmation email:', error);
     }
@@ -183,6 +184,83 @@ export class OrdersService {
     return this.prisma.order.update({
       where: { id },
       data: { status },
+    });
+  }
+
+  async setProviderRef(orderId: string, code: number | string): Promise<void> {
+    await this.prisma.order.update({
+      where: { id: orderId },
+      data: { providerRef: String(code) },
+    });
+  }
+
+  async confirmPayment(orderId: string): Promise<import('@prisma/client').Order> {
+    return this.prisma.$transaction(async (tx) => {
+      // First, get the order with items to know what licenses to create
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { items: true },
+      });
+
+      if (!order) {
+        throw new Error(`Order not found: ${orderId}`);
+      }
+
+      // Update order status to PAID
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: { status: 'PAID' },
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
+          },
+          user: true,
+        },
+      });
+
+      // Create a license for each order item (if not already exists)
+      for (const item of order.items) {
+        try {
+          await tx.license.create({
+            data: {
+              userId: order.userId,
+              orderId: order.id,
+              productId: item.productId,
+              key: this.genLicenseKey(),
+              downloadCount: 0,
+            },
+          });
+        } catch (error: any) {
+          // Ignore duplicate key errors (P2002) - license already exists for this order/product
+          if (error.code !== 'P2002') {
+            throw error;
+          }
+          // If duplicate, we can optionally log or just skip
+        }
+      }
+
+      return updatedOrder;
+    });
+  }
+
+  private genLicenseKey(): string {
+    // Generate a random 32-character hex string (16 bytes)
+    return crypto.randomBytes(16).toString('hex');
+  }
+
+  async findByProviderRef(code: string): Promise<import('@prisma/client').Order | null> {
+    return this.prisma.order.findFirst({
+      where: { providerRef: String(code) },
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
+        },
+        user: true,
+      },
     });
   }
 }
