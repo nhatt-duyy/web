@@ -1,8 +1,11 @@
-'use client';
-
 import { useEffect, useState } from 'react';
 
-interface Product {
+interface ApiResponse {
+  data: Product[];
+  total: number;
+}
+
+export interface Product {
   id: string;
   slug: string;
   title: string;
@@ -21,24 +24,12 @@ interface Product {
   updatedAt: string;
 }
 
-interface ApiResponse {
-  data: Product[];
-  total: number;
-}
-
 interface UseProductsOptions {
-  sortBy?: 'price' | 'createdAt';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: string;
+  sortOrder?: string;
   limit?: number;
   page?: number;
-  // category?: string; // not required for this task
-}
-
-interface UseProductsReturn {
-  data: Product[];
-  total: number;
-  loading: boolean;
-  error: Error | null;
+  category?: string | null;
 }
 
 /**
@@ -46,14 +37,13 @@ interface UseProductsReturn {
  * @param options - Query parameters for filtering, sorting, pagination.
  * @returns Object containing data, total count, loading state, and error.
  */
-export function useProducts(options: UseProductsOptions = {}): UseProductsReturn {
-  const {
-    sortBy = 'createdAt',
-    sortOrder = 'desc',
-    limit = 8,
-    page = 1,
-  } = options;
-
+export default function useProducts({
+  sortBy = 'createdAt',
+  sortOrder = 'desc',
+  limit = 8,
+  page = 1,
+  category,
+}: UseProductsOptions = {}) {
   const [data, setData] = useState<Product[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
@@ -67,6 +57,9 @@ export function useProducts(options: UseProductsOptions = {}): UseProductsReturn
       try {
         // Build query string
         const params = new URLSearchParams();
+        if (category) {
+          params.append('category', category);
+        }
         params.append('sortBy', sortBy);
         params.append('sortOrder', sortOrder);
         params.append('limit', limit.toString());
@@ -107,7 +100,7 @@ export function useProducts(options: UseProductsOptions = {}): UseProductsReturn
     return () => {
       isMounted = false;
     };
-  }, [sortBy, sortOrder, limit, page]);
+  }, [sortBy, sortOrder, limit, page, category]);
 
   return { data, total, loading, error };
 }

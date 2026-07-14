@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
-import { useProducts } from '@/lib/use-products';
+import useProducts from '@/lib/use-products';
 import ProductGrid from '@/components/product-grid';
 
 export default function HomePage() {
@@ -11,6 +11,7 @@ export default function HomePage() {
     sortBy: 'createdAt',
     sortOrder: 'desc',
     limit: 8,
+    page: 1,
   });
 
   
