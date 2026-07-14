@@ -56,6 +56,29 @@ export class AuthService {
     return { success: true };
   }
 
+  async sendVerifyEmail(email: string) {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user) return;
+    const token = require('crypto').randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 1000 * 60 * 60); // 1 giờ
+    await this.prisma.user.update({
+      where: { email },
+      data: { verificationToken: token, verificationExpires: expires },
+    });
+    await this.email.sendVerificationEmail(email, token);
+  }
+
+  async verifyEmail(token: string) {
+    const user = await this.prisma.user.findFirst({ where: { verificationToken: token } });
+    if (!user || !user.verificationExpires || user.verificationExpires < new Date())
+      throw new UnauthorizedException('Token xác thực không hợp lệ hoặc đã hết hạn');
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerifiedAt: new Date(), verificationToken: null, verificationExpires: null },
+    });
+    return { success: true };
+  }
+
   private signToken(id: string, email: string, role: string) {
     return { access_token: this.jwt.sign({ sub: id, email, role }) };
   }

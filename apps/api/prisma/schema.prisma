@@ -34,6 +34,8 @@ model User {
   image        String?
   resetToken   String?
   resetExpires DateTime?
+  verificationToken   String?
+  verificationExpires DateTime?
   createdAt    DateTime @default(now())
   orders       Order[]
   licenses     License[]
