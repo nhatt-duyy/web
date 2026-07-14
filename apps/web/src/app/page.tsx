@@ -5,7 +5,6 @@ import Header from '@/components/header';
 import Footer from '@/components/footer';
 import { useProducts } from '@/lib/use-products';
 import ProductGrid from '@/components/product-grid';
-import { useState } from 'react';
 
 export default function HomePage() {
   const { data: products, total, loading, error } = useProducts({
@@ -14,12 +13,7 @@ export default function HomePage() {
     limit: 8,
   });
 
-  const [showError, setShowError] = useState(false);
-
-  if (error) {
-    setShowError(true);
-  }
-
+  
   return (
     <>
       <Header />
@@ -57,7 +51,7 @@ export default function HomePage() {
                   <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
                 </div>
               </div>
-            ) : showError ? (
+            ) : error ? (
               <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6">
                 <p>Có lỗi xảy ra khi tải sản phẩm. Vui lòng thử lại sau.</p>
               </div>

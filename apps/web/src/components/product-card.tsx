@@ -53,7 +53,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Category badge */}
         {product.category && product.category.name ? (
-          <div className="absolute top-3 left-3 flex items-space-x-2 rounded-full px-2 py-1 text-xs font-medium bg-indigo-100 text-indigo-800">
+          <div className="absolute top-3 left-3 flex flex items-center space-x-2 rounded-full px-2 py-1 text-xs font-medium bg-indigo-100 text-indigo-800">
             <span className="dot w-1 h-1 bg-indigo-600 rounded-full"></span>
             <span>{product.category.name}</span>
           </div>
