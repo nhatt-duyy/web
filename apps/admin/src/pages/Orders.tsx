@@ -218,7 +218,7 @@ const Orders = () => {
         <button
           onClick={handleNext}
           disabled={page * limit >= total}
-          className={`px-4 py-2 rounded-md border border-hover:bg-accent/50`}
+          className={`px-4 py-2 rounded-md border border-border hover:bg-accent/50`}
         >
           Tiếp theo
         </button>
