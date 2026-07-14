@@ -1,10 +1,10 @@
-// apps/api/src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './database/prisma.module';
 import { StorageModule } from './storage/storage.module';
 import { AuthModule } from './auth/auth.module';
 import { EmailModule } from './common/email/email.module';
+import { ProductsModule } from './products/products.module';
 
 @Module({
   imports: [
@@ -13,6 +13,7 @@ import { EmailModule } from './common/email/email.module';
     StorageModule,
     AuthModule,
     EmailModule,
+    ProductsModule,
   ],
 })
 export class AppModule {}
