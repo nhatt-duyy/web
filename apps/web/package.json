@@ -9,17 +9,18 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@shared/ui": "workspace:*",
     "next": "15.0.0",
+    "next-auth": "5.0.0-beta.22",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "next-auth": "5.0.0-beta.22",
-    "@shared/ui": "workspace:*"
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "typescript": "^5.5.0",
+    "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "tailwindcss": "^4.0.0",
-    "@tailwindcss/postcss": "^4.0.0"
+    "typescript": "^5.5.0"
   }
 }
