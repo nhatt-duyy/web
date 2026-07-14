@@ -23,15 +23,14 @@ export class ProductsController {
   @Get()
   async findAll(
     @Query('category') category?: string,
-    @Query('isPublished') isOptionalPublished?: string,
     @Query('sortBy') sortBy?: 'price' | 'createdAt',
     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
     @Query('page', ParseIntPipe) page: number = 1,
     @Query('limit', ParseIntPipe) limit: number = 10,
   ) {
-    const isPublished = isOptionalPublished === 'true' ? true : isOptionalPublished === 'false' ? false : undefined;
+    // isPublished luôn = true ở tầng service (danh sách công khai)
     return this.productsService.findAll(
-      { category, isPublished },
+      { category },
       sortBy ?? 'createdAt',
       sortOrder ?? 'desc',
       page,

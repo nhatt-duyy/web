@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -32,16 +33,13 @@ export class ProductsService {
     page: number = 1,
     limit: number = 10,
   ) {
-    const where: any = {};
+    // Danh sách công khai: LUÔN chỉ trả sản phẩm đã publish
+    const where: any = { isPublished: true };
 
     if (filter.category) {
       where.category = {
         slug: filter.category,
       };
-    }
-
-    if (filter.isPublished !== undefined) {
-      where.isPublished = filter.isPublished;
     }
 
     const [data, total] = await this.prisma.$transaction([
@@ -68,10 +66,14 @@ export class ProductsService {
   }
 
   async findOneBySlug(slug: string) {
-    return this.prisma.product.findUnique({
-      where: { slug },
+    const product = await this.prisma.product.findFirst({
+      where: { slug, isPublished: true },
       include: { category: true },
     });
+    if (!product) {
+      throw new NotFoundException(`Không tìm thấy sản phẩm với slug "${slug}"`);
+    }
+    return product;
   }
 
   async update(id: string, dto: UpdateProductDto) {
@@ -79,13 +81,28 @@ export class ProductsService {
     if (dto.title && !dto.slug) {
       updateData.slug = this.generateSlug(dto.title);
     }
-    return this.prisma.product.update({
-      where: { id },
-      data: updateData,
-    });
+    try {
+      return await this.prisma.product.update({
+        where: { id },
+        data: updateData,
+      });
+    } catch (error) {
+      this.throwIfNotFound(error, id);
+    }
   }
 
   async remove(id: string) {
-    return this.prisma.product.delete({ where: { id } });
+    try {
+      return await this.prisma.product.delete({ where: { id } });
+    } catch (error) {
+      this.throwIfNotFound(error, id);
+    }
+  }
+
+  private throwIfNotFound(error: unknown, id: string) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      throw new NotFoundException(`Không tìm thấy sản phẩm với id "${id}"`);
+    }
+    throw error;
   }
 }
