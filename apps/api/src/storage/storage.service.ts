@@ -30,4 +30,13 @@ export class StorageService {
   async getSignedUrl(key: string, expiresIn = 300): Promise<string> {
     return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), { expiresIn });
   }
+
+  // Tạo URL đã ký (presigned PUT) để admin upload file trực tiếp lên R2 từ trình duyệt.
+  async getPresignedUploadUrl(key: string, contentType: string, expiresIn = 300): Promise<string> {
+    return getSignedUrl(
+      this.client,
+      new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }),
+      { expiresIn },
+    );
+  }
 }
