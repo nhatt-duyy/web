@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  PAYOS
+  STRIPE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String?
+  role         Role     @default(CUSTOMER)
+  emailVerifiedAt DateTime?
+  image        String?
+  createdAt    DateTime @default(now())
+  orders       Order[]
+  licenses     License[]
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  slug      String    @unique
+  name      String
+  products  Product[]
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  description String
+  price       Int       // đơn vị VND (không dùng số thập phân)
+  thumbnail   String?
+  fileKey     String?   // key trên R2
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id])
+  isPublished Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id])
+  status    OrderStatus    @default(PENDING)
+  total     Int
+  provider  PaymentProvider
+  providerRef String?      // order code từ cổng TT
+  items     OrderItem[]
+  license   License?
+  createdAt DateTime       @default(now())
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  price     Int
+}
+
+model License {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id])
+  productId String
+  key       String   @unique
+  downloadCount Int  @default(0)
+  createdAt DateTime @default(now())
+}

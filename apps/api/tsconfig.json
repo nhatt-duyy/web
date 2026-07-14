@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2021",
+    "decorators": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "strict": true,
+    "outDir": "dist",
+    "baseUrl": "./",
+    "paths": { "@shared/types": ["../../packages/types/src/index.ts"] }
+  },
+  "include": ["src/**/*", "prisma/**/*"]
+}
