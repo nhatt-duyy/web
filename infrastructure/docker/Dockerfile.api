@@ -1,0 +1,8 @@
+FROM node:20-alpine AS base
+RUN corepack enable
+WORKDIR /app
+COPY . .
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter api build
+EXPOSE 3001
+CMD ["pnpm", "--filter", "api", "start"]
