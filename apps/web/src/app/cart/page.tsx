@@ -60,7 +60,7 @@ export default function CartPage() {
               <div className="space-y-4">
                 {items.map((item) => (
                   <div
-                    key={item.id}
+                    key={`${item.id}::${item.tierId ?? ''}`}
                     className="group flex items-center gap-4 rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-border-strong"
                   >
                     <Link
@@ -88,8 +88,11 @@ export default function CartPage() {
                             {item.title}
                           </Link>
                         </h3>
+                        {item.tierName && (
+                          <p className="mt-0.5 text-xs text-primary">Gói: {item.tierName}</p>
+                        )}
                         <button
-                          onClick={() => removeItem(item.id)}
+                          onClick={() => removeItem(item.id, item.tierId)}
                           aria-label="Xóa sản phẩm"
                           className="shrink-0 rounded-lg p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger"
                         >
@@ -101,7 +104,7 @@ export default function CartPage() {
                       <div className="mt-3 flex items-center justify-between">
                         <div className="flex items-center gap-1 rounded-xl border border-border">
                           <button
-                            onClick={() => updateQty(item.id, Math.max(0, item.qty - 1))}
+                            onClick={() => updateQty(item.id, Math.max(0, item.qty - 1), item.tierId)}
                             aria-label="Giảm số lượng"
                             className="grid h-9 w-9 cursor-pointer place-items-center rounded-l-xl text-foreground transition-colors hover:bg-surface-2"
                           >
@@ -109,7 +112,7 @@ export default function CartPage() {
                           </button>
                           <span className="w-9 text-center text-sm font-medium">{item.qty}</span>
                           <button
-                            onClick={() => updateQty(item.id, item.qty + 1)}
+                            onClick={() => updateQty(item.id, item.qty + 1, item.tierId)}
                             aria-label="Tăng số lượng"
                             className="grid h-9 w-9 cursor-pointer place-items-center rounded-r-xl text-foreground transition-colors hover:bg-surface-2"
                           >

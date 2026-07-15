@@ -1,4 +1,4 @@
-import { IsString, IsInt, Min } from 'class-validator';
+import { IsString, IsInt, Min, IsOptional } from 'class-validator';
 
 export class CreateOrderItemDto {
   @IsString()
@@ -7,4 +7,9 @@ export class CreateOrderItemDto {
   @IsInt()
   @Min(1)
   qty: number = 0;
+
+  // Gói license khách chọn (đa license Phase 2)
+  @IsOptional()
+  @IsString()
+  licenseTierId?: string;
 }

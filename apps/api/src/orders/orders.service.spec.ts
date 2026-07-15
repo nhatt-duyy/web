@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../database/prisma.service';
 import { EmailService } from '../common/email/email.service';
+import { CouponsService } from '../coupons/coupons.service';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { OrderStatus, PaymentProvider } from '@prisma/client';
 
@@ -44,6 +45,7 @@ describe('OrdersService', () => {
         OrdersService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: EmailService, useValue: mockEmailService },
+        { provide: CouponsService, useValue: { validate: jest.fn() } },
       ],
     }).compile();
 
@@ -125,7 +127,11 @@ describe('OrdersService', () => {
           id: { in: ['product-1', 'product-2'] },
           isPublished: true,
         },
-        select: { id: true, price: true },
+        select: {
+          id: true,
+          price: true,
+          tiers: { orderBy: { sortOrder: 'asc' } },
+        },
       });
       expect(mockEmailService.sendOrderConfirmation).toHaveBeenCalledWith(
         'test@example.com',

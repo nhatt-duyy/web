@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProductsService } from './products.service';
 import { PrismaService } from '../database/prisma.service';
+import { SearchService } from '../search/search.service';
 
 describe('ProductsService', () => {
   let service: ProductsService;
@@ -22,6 +23,16 @@ describe('ProductsService', () => {
               delete: jest.fn(),
             },
             $transaction: jest.fn(),
+          },
+        },
+        {
+          provide: SearchService,
+          useValue: {
+            upsertProduct: jest.fn(),
+            removeProduct: jest.fn(),
+            search: jest.fn(),
+            syncAll: jest.fn(),
+            initIndex: jest.fn(),
           },
         },
       ],
@@ -50,6 +61,11 @@ describe('ProductsService', () => {
         thumbnail: null,
         fileKey: null,
         isPublished: false,
+        images: [],
+        docs: null,
+        changelog: null,
+        demoUrl: null,
+        language: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -57,11 +73,12 @@ describe('ProductsService', () => {
 
       expect(await service.create(dto)).toBe(result);
       expect(prisma.product.create).toHaveBeenCalledWith({
-        data: {
+        data: expect.objectContaining({
           ...dto,
           slug: 'test-product',
           isPublished: false,
-        },
+        }),
+        include: { category: true, tiers: { orderBy: { sortOrder: 'asc' } } },
       });
     });
 
@@ -79,6 +96,11 @@ describe('ProductsService', () => {
         ...dto,
         thumbnail: null,
         fileKey: null,
+        images: [],
+        docs: null,
+        changelog: null,
+        demoUrl: null,
+        language: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -86,7 +108,8 @@ describe('ProductsService', () => {
 
       expect(await service.create(dto)).toBe(result);
       expect(prisma.product.create).toHaveBeenCalledWith({
-        data: dto,
+        data: expect.objectContaining({ ...dto, isPublished: true }),
+        include: { category: true, tiers: { orderBy: { sortOrder: 'asc' } } },
       });
     });
   });
@@ -103,6 +126,11 @@ describe('ProductsService', () => {
           fileKey: null,
           categoryId: 'cat-1',
           isPublished: true,
+          images: [],
+          docs: null,
+          changelog: null,
+          demoUrl: null,
+          language: null,
           createdAt: new Date(),
           updatedAt: new Date(),
           slug: 'product-1',
@@ -144,7 +172,7 @@ describe('ProductsService', () => {
           category: { slug: 'cat-1' },
           isPublished: true,
         },
-        include: { category: true },
+        include: { category: true, tiers: { orderBy: { sortOrder: 'asc' } } },
         orderBy: {
           price: 'asc',
         },

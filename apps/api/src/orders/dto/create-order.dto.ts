@@ -1,4 +1,4 @@
-import { IsArray, ValidateNested, IsOptional, IsEnum } from 'class-validator';
+import { IsArray, ValidateNested, IsOptional, IsEnum, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateOrderItemDto } from './create-order-item.dto';
 import { PaymentProvider } from '@prisma/client';
@@ -12,4 +12,9 @@ export class CreateOrderDto {
   @IsOptional()
   @IsEnum(PaymentProvider)
   provider?: PaymentProvider;
+
+  // Mã giảm giá (Phase 2)
+  @IsOptional()
+  @IsString()
+  couponCode?: string;
 }

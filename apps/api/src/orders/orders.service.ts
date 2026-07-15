@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { EmailService } from '../common/email/email.service';
+import { CouponsService } from '../coupons/coupons.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderStatus, PaymentProvider, Product, License } from '@prisma/client';
@@ -11,37 +12,71 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
+    private readonly couponsService: CouponsService,
   ) {}
 
   async create(dto: CreateOrderDto, userId: string) {
-    // Validate each product exists and is published
-    const productIds = dto.items.map(item => item.productId);
+    const productIds = dto.items.map((item) => item.productId);
+
+    // Lấy sản phẩm + gói license kèm theo (giá authoritative từ server)
     const products = await this.prisma.product.findMany({
-      where: {
-        id: { in: productIds },
-        isPublished: true,
+      where: { id: { in: productIds }, isPublished: true },
+      select: {
+        id: true,
+        price: true,
+        tiers: { orderBy: { sortOrder: 'asc' } },
       },
-      select: { id: true, price: true },
     });
 
-    // Check if all products are found and published
     if (products.length !== productIds.length) {
       throw new BadRequestException('Một hoặc nhiều sản phẩm không tồn tại hoặc chưa được công bố');
     }
 
-    // Create a map of productId to price for quick lookup
-    const priceMap = new Map<string, number>();
-    products.forEach(p => priceMap.set(p.id, p.price));
+    const productMap = new Map<
+      string,
+      { price: number; tiers: { id: string; price: number; name: string }[] }
+    >();
+    products.forEach((p) => productMap.set(p.id, { price: p.price, tiers: p.tiers }));
 
-    // Calculate total
-    let total = 0;
+    // Tính tiền từng item — ưu tiên giá gói license nếu khách chọn
+    let subtotal = 0;
+    const itemPricing: {
+      productId: string;
+      price: number;
+      qty: number;
+      licenseTierId: string | null;
+      tierName: string | null;
+    }[] = [];
+
     for (const item of dto.items) {
-      const price = priceMap.get(item.productId);
-      if (price === undefined) {
-        // This should not happen because we checked above, but just in case
-        throw new BadRequestException(`Sản phẩm với id ${item.productId} không tồn tại hoặc chưa được công bố`);
+      const p = productMap.get(item.productId);
+      if (!p) {
+        throw new BadRequestException(`Sản phẩm ${item.productId} không hợp lệ`);
       }
-      total += price * item.qty;
+      let price = p.price;
+      let tierName: string | null = null;
+      const licenseTierId: string | null = item.licenseTierId ?? null;
+
+      if (licenseTierId) {
+        const tier = p.tiers.find((t) => t.id === licenseTierId);
+        if (!tier) {
+          throw new BadRequestException('Gói license không thuộc sản phẩm này');
+        }
+        price = tier.price;
+        tierName = tier.name;
+      }
+
+      subtotal += price * item.qty;
+      itemPricing.push({ productId: item.productId, price, qty: item.qty, licenseTierId, tierName });
+    }
+
+    // Áp dụng mã giảm giá (server-authoritative)
+    let couponCode: string | null = null;
+    let total = subtotal;
+    if (dto.couponCode) {
+      const result = await this.couponsService.validate(dto.couponCode, subtotal);
+      couponCode = result.coupon.code;
+      total = result.total;
     }
 
     // Determine provider
@@ -49,31 +84,31 @@ export class OrdersService {
 
     // Create order and order items in a transaction
     const order = await this.prisma.$transaction(async (tx) => {
-      // Create order
-      const order = await tx.order.create({
+      const created = await tx.order.create({
         data: {
           userId,
           status: OrderStatus.PENDING,
           total,
           provider,
+          couponCode,
         },
       });
 
-      // Create order items
-      for (const item of dto.items) {
+      for (const it of itemPricing) {
         await tx.orderItem.create({
           data: {
-            orderId: order.id,
-            productId: item.productId,
-            price: priceMap.get(item.productId)!,
-            qty: item.qty,
+            orderId: created.id,
+            productId: it.productId,
+            price: it.price,
+            qty: it.qty,
+            licenseTierId: it.licenseTierId,
+            tierName: it.tierName,
           },
         });
       }
 
-      // Return the order with items and user details
       return tx.order.findUnique({
-        where: { id: order.id },
+        where: { id: created.id },
         include: {
           items: {
             include: {
@@ -221,24 +256,26 @@ export class OrdersService {
         },
       });
 
-      // Create a license for each order item (if not already exists)
+      // Tạo license cho MỖI order item (Phase 2: 1 license / 1 item)
       for (const item of order.items) {
         try {
           await tx.license.create({
             data: {
               userId: order.userId,
               orderId: order.id,
+              orderItemId: item.id,
               productId: item.productId,
+              licenseTierId: item.licenseTierId ?? null,
               key: this.genLicenseKey(),
               downloadCount: 0,
+              downloadLimit: 5,
             },
           });
         } catch (error: any) {
-          // Ignore duplicate key errors (P2002) - license already exists for this order/product
+          // Bỏ qua lỗi trùng khóa (P2002) - license đã tồn tại cho item này
           if (error.code !== 'P2002') {
             throw error;
           }
-          // If duplicate, we can optionally log or just skip
         }
       }
 

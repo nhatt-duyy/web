@@ -21,6 +21,10 @@ export default function CheckoutPage() {
   const api = useApi();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [coupon, setCoupon] = useState('');
+  const [applied, setApplied] = useState<{ code: string; discount: number; total: number } | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [couponMsg, setCouponMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'authenticated') return;
@@ -30,6 +34,38 @@ export default function CheckoutPage() {
   }, [status, router]);
 
   const totalAmount = items.reduce((sum, item) => sum + (item.price || 0) * (item.qty || 0), 0);
+  const discount = applied?.discount ?? 0;
+  const finalTotal = Math.max(0, totalAmount - discount);
+
+  const applyCoupon = async () => {
+    const code = coupon.trim();
+    if (!code) return;
+    setApplying(true);
+    setCouponMsg(null);
+    try {
+      const res = await api('/coupons/validate', {
+        method: 'POST',
+        body: JSON.stringify({ code, subtotal: totalAmount }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setApplied(null);
+        throw new Error(data.message || 'Mã giảm giá không hợp lệ');
+      }
+      setApplied({ code: data.code, discount: data.discount, total: data.total });
+      setCouponMsg(`Đã áp dụng mã ${data.code}: -${formatPrice(data.discount)}`);
+    } catch (err: any) {
+      setCouponMsg(err.message || 'Mã giảm giá không hợp lệ');
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setApplied(null);
+    setCoupon('');
+    setCouponMsg(null);
+  };
 
   const handleCheckout = async () => {
     if (!items || items.length === 0) {
@@ -42,7 +78,12 @@ export default function CheckoutPage() {
       const orderResponse = await api('/orders', {
         method: 'POST',
         body: JSON.stringify({
-          items: items.map((item) => ({ productId: item.id, qty: item.qty })),
+          items: items.map((item) => ({
+            productId: item.id,
+            qty: item.qty,
+            licenseTierId: item.tierId ?? undefined,
+          })),
+          couponCode: applied?.code,
         }),
       });
       if (!orderResponse.ok) {
@@ -161,6 +202,9 @@ export default function CheckoutPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate text-sm font-medium">{item.title}</h3>
+                      {item.tierName && (
+                        <p className="mt-0.5 text-xs text-primary">Gói: {item.tierName}</p>
+                      )}
                       <p className="mt-1 text-sm text-muted">Số lượng: {item.qty}</p>
                     </div>
                     <span className="shrink-0 font-mono text-sm font-semibold">
@@ -175,14 +219,53 @@ export default function CheckoutPage() {
             <aside className="lg:sticky lg:top-24">
               <div className="rounded-2xl border border-border bg-surface p-6">
                 <h2 className="mb-4 font-display text-lg font-semibold">Tóm tắt đơn hàng</h2>
+
+                {/* Mã giảm giá */}
+                <div className="mb-4">
+                  {applied ? (
+                    <div className="flex items-center justify-between rounded-xl border border-success/30 bg-success/10 px-3 py-2 text-sm">
+                      <span className="font-medium text-success">Mã {applied.code}</span>
+                      <button onClick={removeCoupon} className="text-xs text-muted hover:text-danger">
+                        Bỏ mã
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={coupon}
+                        onChange={(e) => setCoupon(e.target.value.toUpperCase())}
+                        placeholder="Nhập mã giảm giá"
+                        className="h-10 flex-1 rounded-xl border border-border bg-surface px-3 text-sm uppercase outline-none transition-colors focus:border-primary"
+                      />
+                      <button
+                        onClick={applyCoupon}
+                        disabled={applying || !coupon.trim()}
+                        className="h-10 shrink-0 rounded-xl border border-border-strong px-3 text-sm font-semibold transition-colors hover:border-primary hover:bg-primary-soft disabled:opacity-50"
+                      >
+                        {applying ? '...' : 'Áp dụng'}
+                      </button>
+                    </div>
+                  )}
+                  {couponMsg && (
+                    <p className={`mt-2 text-xs ${applied ? 'text-success' : 'text-danger'}`}>{couponMsg}</p>
+                  )}
+                </div>
+
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between text-muted">
                     <span>Tạm tính</span>
                     <span>{formatPrice(totalAmount)}</span>
                   </div>
+                  {discount > 0 && (
+                    <div className="flex justify-between text-success">
+                      <span>Giảm giá</span>
+                      <span>-{formatPrice(discount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between border-t border-border pt-3 text-base font-semibold">
                     <span>Tổng cộng</span>
-                    <span className="font-mono">{formatPrice(totalAmount)}</span>
+                    <span className="font-mono">{formatPrice(finalTotal)}</span>
                   </div>
                 </div>
 
