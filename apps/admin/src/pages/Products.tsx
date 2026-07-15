@@ -22,6 +22,12 @@ type ProductsResponse = {
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 
+const PlusIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -82,17 +88,22 @@ const Products = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-foreground">Quản lý Sản phẩm</h1>
-        <button
-          onClick={openCreate}
-          className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90"
-        >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Quản lý Sản phẩm</h1>
+          <p className="mt-1 text-sm text-muted">{products.length} sản phẩm trong kho</p>
+        </div>
+        <button onClick={openCreate} className="btn-primary">
+          <PlusIcon />
           Thêm sản phẩm
         </button>
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <div role="alert" className="rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
+          {error}
+        </div>
+      )}
 
       {showForm && (
         <ProductForm
@@ -106,62 +117,69 @@ const Products = () => {
         />
       )}
 
-      {loading ? (
-        <p className="text-muted-foreground">Đang tải...</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-border">
-            <thead>
-              <tr className="bg-muted">
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground">Ảnh</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground">Tên</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground">Giá</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground">Danh mục</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground">Trạng thái</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {products.map((p) => (
-                <tr key={p.id} className="hover:bg-accent/50">
-                  <td className="px-6 py-4">
-                    {p.thumbnail ? (
-                      <img src={p.thumbnail} alt={p.title} className="h-12 w-12 object-cover rounded border border-border" />
-                    ) : (
-                      <span className="text-muted-foreground text-xs">—</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-medium">{p.title}</td>
-                  <td className="px-6 py-4 text-sm whitespace-nowrap">{formatCurrency(p.price)}</td>
-                  <td className="px-6 py-4 text-sm">{categoryName(p.categoryId)}</td>
-                  <td className="px-6 py-4 text-sm">
-                    {p.isPublished ? (
-                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Đã xuất bản</span>
-                    ) : (
-                      <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs">Nháp</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm flex space-x-2">
-                    <button onClick={() => openEdit(p)} className="text-primary hover:underline">
-                      Sửa
-                    </button>
-                    <button onClick={() => handleDelete(p.id)} className="text-destructive hover:underline">
-                      Xóa
-                    </button>
-                  </td>
+      <div className="card overflow-hidden">
+        {loading ? (
+          <div className="p-10 text-center text-sm text-muted">Đang tải...</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-2">
+                  <th className="px-5 py-3 font-medium">Ảnh</th>
+                  <th className="px-5 py-3 font-medium">Tên</th>
+                  <th className="px-5 py-3 font-medium">Giá</th>
+                  <th className="px-5 py-3 font-medium">Danh mục</th>
+                  <th className="px-5 py-3 font-medium">Trạng thái</th>
+                  <th className="px-5 py-3 text-right font-medium">Thao tác</th>
                 </tr>
-              ))}
-              {products.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-muted-foreground">
-                    Chưa có sản phẩm
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody className="divide-y divide-border">
+                {products.map((p) => (
+                  <tr key={p.id} className="transition-colors hover:bg-surface-2">
+                    <td className="px-5 py-3">
+                      {p.thumbnail ? (
+                        <img src={p.thumbnail} alt={p.title} className="h-11 w-11 rounded-lg border border-border object-cover" />
+                      ) : (
+                        <span className="grid h-11 w-11 place-items-center rounded-lg bg-surface-2 text-xs text-muted-2">—</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      <p className="font-medium">{p.title}</p>
+                      <p className="text-xs text-muted-2">/{p.slug}</p>
+                    </td>
+                    <td className="px-5 py-3 whitespace-nowrap font-medium">{formatCurrency(p.price)}</td>
+                    <td className="px-5 py-3 text-muted">{categoryName(p.categoryId)}</td>
+                    <td className="px-5 py-3">
+                      {p.isPublished ? (
+                        <span className="chip border-success/30 bg-success/10 text-xs text-success">Đã xuất bản</span>
+                      ) : (
+                        <span className="chip text-xs text-muted-2">Nháp</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex justify-end gap-3">
+                        <button onClick={() => openEdit(p)} className="font-medium text-primary transition-colors hover:text-primary-strong">
+                          Sửa
+                        </button>
+                        <button onClick={() => handleDelete(p.id)} className="font-medium text-danger transition-colors hover:text-danger-soft">
+                          Xóa
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {products.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-10 text-center text-muted">
+                      Chưa có sản phẩm
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
