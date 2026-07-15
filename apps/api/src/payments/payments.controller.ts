@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Req, UseGuards, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PaymentsService } from './payments.service';
@@ -35,7 +35,7 @@ export class PaymentsController {
       productId: item.productId,
       title: item.product?.title ?? item.productId,
       price: item.price,
-      qty: 1, // quantity assumed as 1
+      qty: item.qty ?? 1,
     }));
 
     const paymentLink = await this.paymentsService.createPaymentLink({
@@ -73,7 +73,7 @@ export class PaymentsController {
     );
 
     if (!isValid) {
-      throw new Error('Chữ ký webhook không hợp lệ');
+      throw new BadRequestException('Chữ ký webhook không hợp lệ');
     }
 
     // Process webhook

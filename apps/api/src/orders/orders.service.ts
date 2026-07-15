@@ -66,6 +66,7 @@ export class OrdersService {
             orderId: order.id,
             productId: item.productId,
             price: priceMap.get(item.productId)!,
+            qty: item.qty,
           },
         });
       }

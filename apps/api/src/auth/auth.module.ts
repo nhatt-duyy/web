@@ -13,7 +13,7 @@ import { RolesGuard } from './guards/roles.guard';
     PrismaModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET ?? 'dev',
-      signOptions: { expiresIn: '60s' },
+      signOptions: { expiresIn: '7d' },
     }),
     EmailModule,
   ],

@@ -1,5 +1,6 @@
 import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import * as crypto from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../database/prisma.service';
 import { EmailService } from '../common/email/email.service';
@@ -33,7 +34,7 @@ export class AuthService {
   async forgotPassword(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) return; // không lộ user không tồn tại
-    const token = require('crypto').randomBytes(32).toString('hex');
+    const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 1000 * 60 * 30); // 30 phút
     await this.prisma.user.update({
       where: { email },
@@ -59,7 +60,7 @@ export class AuthService {
   async sendVerifyEmail(email: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user) return;
-    const token = require('crypto').randomBytes(32).toString('hex');
+    const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(Date.now() + 1000 * 60 * 60); // 1 giờ
     await this.prisma.user.update({
       where: { email },

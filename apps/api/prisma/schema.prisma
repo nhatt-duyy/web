@@ -84,6 +84,7 @@ model OrderItem {
   productId String
   product   Product @relation(fields: [productId], references: [id])
   price     Int
+  qty       Int     @default(1)
 }
 
 model License {

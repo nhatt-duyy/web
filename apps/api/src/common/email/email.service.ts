@@ -81,10 +81,10 @@ export class EmailService {
     const subject = `Xác nhận đơn hàng #${order.id}`;
     const itemsHtml = order.items?.map((item: any) => `
       <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.product?.name || 'Produto'}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;">${item.product?.title || 'Sản phẩm'}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.qty ?? 1}</td>
         <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatVND(item.price)}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatVND(item.price * item.quantity)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatVND(item.price * (item.qty ?? 1))}</td>
       </tr>
     `).join('') || '';
 
