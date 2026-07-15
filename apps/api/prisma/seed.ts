@@ -60,9 +60,21 @@ async function main() {
     catMap[c.slug] = created.id;
   }
 
+  // User demo để tạo review mẫu
+  const demoUser = await prisma.user.upsert({
+    where: { email: 'demo@sourceban.com' },
+    update: {},
+    create: {
+      email: 'demo@sourceban.com',
+      name: 'Khách demo',
+      passwordHash: null,
+      role: 'CUSTOMER',
+    },
+  });
+
   for (const p of products) {
     const slug = p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    await prisma.product.upsert({
+    const product = await prisma.product.upsert({
       where: { slug },
       update: {},
       create: {
@@ -73,15 +85,85 @@ async function main() {
         thumbnail: thumb(p.title, p.from, p.to),
         isPublished: true,
         categoryId: catMap[p.category],
+        demoUrl: `https://demo.sourceban.com/${slug}`,
+        images: [thumb(p.title, p.from, p.to)],
+        docs: [{ title: 'Hướng dẫn cài đặt', url: `https://docs.sourceban.com/${slug}` }],
+        changelog: [{ version: '1.0.0', date: '2026-01-01', notes: 'Phiên bản đầu tiên' }],
+      },
+    });
+
+    // Tạo 2 gói license (Regular / Extended) cho mỗi sản phẩm
+    const tiers = [
+      {
+        slug: 'regular',
+        name: 'Regular',
+        price: p.price,
+        description: 'Dùng cho 1 dự án cá nhân/nhỏ.',
+        features: ['1 domain', 'Cập nhật 6 tháng', 'Hỗ trợ qua email'],
+      },
+      {
+        slug: 'extended',
+        name: 'Extended',
+        price: Math.round(p.price * 1.8),
+        description: 'Dùng cho nhiều dự án / khách hàng.',
+        features: ['Unlimited domains', 'Cập nhật trọn đời', 'Hỗ trợ ưu tiên', 'Source code đầy đủ'],
+      },
+    ];
+    for (const t of tiers) {
+      await prisma.licenseTier.upsert({
+        where: { productId_slug: { productId: product.id, slug: t.slug } },
+        update: { price: t.price, name: t.name, description: t.description, features: t.features },
+        create: { ...t, productId: product.id, sortOrder: t.slug === 'regular' ? 0 : 1 },
+      });
+    }
+  }
+
+  // Review mẫu (APPROVED) cho vài sản phẩm
+  const reviewSamples = [
+    { title: 'Shopify Clone', rating: 5, comment: 'Code sạch, dễ hiểu, chạy mượt.' },
+    { title: 'Food Delivery App', rating: 4, comment: 'Tính năng ổn, tài liệu hơi ngắn.' },
+    { title: 'Chatbot AI CRM', rating: 5, comment: 'Rất hài lòng, hỗ trợ nhiệt tình.' },
+    { title: 'Blog Platform', rating: 4, comment: 'Đáp ứng đúng nhu cầu.' },
+  ];
+  for (const r of reviewSamples) {
+    const slug = r.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const prod = await prisma.product.findUnique({ where: { slug } });
+    if (!prod) continue;
+    await prisma.review.upsert({
+      where: { productId_userId: { productId: prod.id, userId: demoUser.id } },
+      update: {},
+      create: {
+        productId: prod.id,
+        userId: demoUser.id,
+        rating: r.rating,
+        comment: r.comment,
+        status: 'APPROVED',
       },
     });
   }
 
-  const [c, n] = await Promise.all([
-    prisma.category.count(),
-    prisma.product.count(),
+  // Coupon mẫu
+  const coupons = [
+    { code: 'WELCOME10', type: 'PERCENT' as const, value: 10, maxDiscount: 200000, minOrder: 0 },
+    { code: 'SALE50K', type: 'FIXED' as const, value: 50000, minOrder: 300000 },
+  ];
+  for (const c of coupons) {
+    await prisma.coupon.upsert({
+      where: { code: c.code },
+      update: {},
+      create: c,
+    });
+  }
+
+  const [c, n] = await Promise.all([prisma.category.count(), prisma.product.count()]);
+  const [tierCount, reviewCount, couponCount] = await Promise.all([
+    prisma.licenseTier.count(),
+    prisma.review.count(),
+    prisma.coupon.count(),
   ]);
-  console.log(`Seed xong: ${c} danh mục, ${n} sản phẩm.`);
+  console.log(
+    `Seed xong: ${c} danh mục, ${n} sản phẩm, ${tierCount} gói license, ${reviewCount} review, ${couponCount} coupon.`,
+  );
 }
 
 main()
