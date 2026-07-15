@@ -170,8 +170,8 @@ export class OrdersService {
       throw new NotFoundException(`Không tìm thấy đơn hàng với id ${id}`);
     }
 
-    // Check if the user is the owner or an admin
-    if (role !== 'ADMIN' && order.userId !== userId) {
+    // Check if the user is the owner, an admin, or support staff
+    if (role !== 'ADMIN' && role !== 'STAFF' && order.userId !== userId) {
       throw new ForbiddenException('Bạn không có quyền xem đơn hàng này');
     }
 

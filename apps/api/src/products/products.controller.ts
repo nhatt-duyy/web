@@ -38,6 +38,22 @@ export class ProductsController {
     );
   }
 
+  // Sản phẩm liên quan (cùng danh mục)
+  @Get('related/:id')
+  async findRelated(
+    @Param('id') id: string,
+    @Query('categoryId') categoryId: string,
+    @Query('limit', new DefaultValuePipe(4), ParseIntPipe) limit: number = 4,
+  ) {
+    return this.productsService.getRelated(id, categoryId, limit);
+  }
+
+  // Danh sách ngôn ngữ đang có (cho bộ lọc tìm kiếm)
+  @Get('languages')
+  async findLanguages() {
+    return this.productsService.findLanguages();
+  }
+
   @Get(':slug')
   async findOne(@Param('slug') slug: string) {
     return this.productsService.findOneBySlug(slug);

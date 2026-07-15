@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PaymentsService } from './payments.service';
 import { ConfigService } from '@nestjs/config';
 import { OrdersService } from '../orders/orders.service';
+import { EmailService } from '../common/email/email.service';
 
 describe('PaymentsService', () => {
   let service: PaymentsService;
@@ -32,6 +33,7 @@ describe('PaymentsService', () => {
         PaymentsService,
         { provide: ConfigService, useValue: configService },
         { provide: OrdersService, useValue: ordersService },
+        { provide: EmailService, useValue: { sendPaymentSuccess: jest.fn() } },
       ],
     }).compile();
 

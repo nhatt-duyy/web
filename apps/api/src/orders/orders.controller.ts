@@ -31,13 +31,22 @@ export class OrdersController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  async findAll(@Query() query: { status?: OrderStatus; page?: number; limit?: number }) {
-    return this.ordersService.findAll(query);
+  @Roles(Role.ADMIN, Role.STAFF)
+  async findAll(
+    @Query('status') status?: OrderStatus,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.ordersService.findAll({
+      status,
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.STAFF)
   async findOne(@Param('id') id: string, @Req() req: Request) {
     const user = req.user as { id: string; role: string };
     const userId = user.id;
