@@ -9,6 +9,7 @@ datasource db {
 
 enum Role {
   CUSTOMER
+  STAFF
   ADMIN
 }
 
@@ -35,6 +36,22 @@ enum TicketStatus {
   CLOSED
 }
 
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum PostType {
+  BLOG
+  PAGE
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
 enum ReviewStatus {
   PENDING
   APPROVED
@@ -46,6 +63,7 @@ model User {
   name         String?
   passwordHash String?
   role         Role     @default(CUSTOMER)
+  isActive     Boolean  @default(true) // khóa/mở tài khoản (CRM Phase 3)
   emailVerifiedAt DateTime?
   image        String?
   resetToken   String?
@@ -56,7 +74,9 @@ model User {
   orders       Order[]
   licenses     License[]
   reviews      Review[]
-  tickets      Ticket[]
+  tickets      Ticket[]             // ticket do user này gửi
+  assignedTickets Ticket[] @relation("TicketAssignee") // ticket được gán cho user này (STAFF/ADMIN)
+  posts        Post[]              // bài viết do user này viết (CMS Phase 3)
 }
 
 model Category {
@@ -64,6 +84,7 @@ model Category {
   slug      String    @unique
   name      String
   products  Product[]
+  posts     Post[]    // bài CMS thuộc danh mục này (Phase 3)
 }
 
 model Product {
@@ -179,15 +200,45 @@ model Coupon {
   createdAt   DateTime    @default(now())
 }
 
-// --- Support Ticket (2.4) ---
+// --- Support Ticket (2.4 + Helpdesk Phase 3) ---
 model Ticket {
-  id        String       @id @default(cuid())
-  userId    String
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subject   String
-  message   String
-  status    TicketStatus @default(OPEN)
-  reply     String?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id           String          @id @default(cuid())
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject      String
+  message      String
+  status       TicketStatus    @default(OPEN)
+  priority     TicketPriority  @default(MEDIUM)
+  assignedToId String?
+  assignedTo   User?           @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  reply        String?
+  closedAt     DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  @@index([status])
+  @@index([assignedToId])
+  @@index([priority])
+}
+
+// --- CMS: Post (blog + trang tĩnh) Phase 3 ---
+model Post {
+  id             String       @id @default(cuid())
+  type           PostType     @default(BLOG)
+  title          String
+  slug           String       @unique
+  excerpt        String?
+  content        String       // Markdown (đã chốt)
+  coverImage     String?
+  status         PostStatus   @default(DRAFT)
+  categoryId     String?
+  category       Category?   @relation(fields: [categoryId], references: [id])
+  authorId       String
+  author         User         @relation(fields: [authorId], references: [id])
+  seoTitle       String?
+  seoDescription String?
+  viewCount      Int          @default(0)
+  publishedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  @@index([type, status, publishedAt])
 }
