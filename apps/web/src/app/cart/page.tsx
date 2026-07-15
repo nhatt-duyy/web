@@ -1,130 +1,163 @@
 'use client';
 
 import { useCartStore } from '@/lib/cart-store';
+import { useShallow } from 'zustand/react/shallow';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 import Link from 'next/link';
-import Image from 'next/image';
+import { Container, EmptyState } from '@/components/ui/primitives';
+import { CartIcon, PlusIcon, MinusIcon, TrashIcon, ArrowRightIcon, ShieldIcon } from '@/components/ui/icons';
+
+const formatPrice = (price: number) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
 export default function CartPage() {
-  const { items, updateQty, removeItem } = useCartStore((s) => ({
-    items: s.items,
-    updateQty: s.updateQty,
-    removeItem: s.removeItem,
-  }));
+  const { items, updateQty, removeItem } = useCartStore(
+    useShallow((s) => ({
+      items: s.items,
+      updateQty: s.updateQty,
+      removeItem: s.removeItem,
+    })),
+  );
   const router = useRouter();
 
   const total = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const count = items.reduce((sum, item) => sum + item.qty, 0);
 
   return (
     <>
       <Header />
-      <main className="min-h-[calc(100vh-4rem)] py-12">
-        <div className="mx-auto max-w-4xl px-4">
+      <main className="py-10">
+        <Container>
+          <nav className="mb-3 flex items-center gap-2 text-sm text-muted" aria-label="Breadcrumb">
+            <Link href="/" className="transition-colors hover:text-primary">
+              Trang chủ
+            </Link>
+            <span aria-hidden="true">/</span>
+            <span className="text-foreground">Giỏ hàng</span>
+          </nav>
+
+          <h1 className="mb-8 text-3xl font-bold tracking-tight sm:text-4xl">Giỏ hàng</h1>
+
           {items.length === 0 ? (
-            <div className="text-center py-12">
-              <h2 className="text-2xl font-bold mb-4">Giỏ hàng trống</h2>
-              <p className="text-muted-foreground">
-                Hãy đi mua sắm để thêm sản phẩm vào giỏ hàng.
-              </p>
-              <Link href="/products" className="inline-block mt-6 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md">
-                Tiếp tục mua sắm
-              </Link>
-            </div>
+            <EmptyState
+              icon={<CartIcon className="h-7 w-7" />}
+              title="Giỏ hàng trống"
+              description="Hãy đi mua sắm để thêm source code vào giỏ hàng của bạn."
+              action={
+                <Link
+                  href="/products"
+                  className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 font-semibold text-white transition-all hover:-translate-y-px hover:bg-primary-strong"
+                >
+                  Tiếp tục mua sắm <ArrowRightIcon className="h-5 w-5" />
+                </Link>
+              }
+            />
           ) : (
-            <>
-              <div className="space-y-6">
+            <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+              {/* Items */}
+              <div className="space-y-4">
                 {items.map((item) => (
-                  <div key={item.id} className="flex items-start gap-4 border-b pb-6">
-                    <div className="flex-shrink-0 h-24 w-24">
+                  <div
+                    key={item.id}
+                    className="group flex items-center gap-4 rounded-2xl border border-border bg-surface p-4 transition-colors hover:border-border-strong"
+                  >
+                    <Link
+                      href={`/products/${item.slug}`}
+                      className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-2"
+                    >
                       {item.thumbnail ? (
-                        <Image
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
                           src={item.thumbnail}
                           alt={item.title}
-                          className="rounded-lg object-cover"
-                          width={200}
-                          height={200}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                       ) : (
-                        <div className="flex h-full flex h-full w-full items-center justify-center rounded-lg border border-dashed bg-muted">
-                          No Image
+                        <div className="flex h-full w-full items-center justify-center text-xs text-muted-2">
+                          No img
                         </div>
                       )}
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <div className="flex justify-between">
-                        <h3 className="text-lg font-semibold">
-                          <Link href={`/products/${item.slug}`} className="hover:underline">
+                    </Link>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="truncate font-medium">
+                          <Link href={`/products/${item.slug}`} className="transition-colors hover:text-primary">
                             {item.title}
                           </Link>
                         </h3>
                         <button
                           onClick={() => removeItem(item.id)}
-                          className="text-muted-foreground hover:text-destructive"
+                          aria-label="Xóa sản phẩm"
+                          className="shrink-0 rounded-lg p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger"
                         >
-                          ×
+                          <TrashIcon className="h-5 w-5" />
                         </button>
                       </div>
-                      <div className="flex items-baseline gap-4">
-                        <span className="text-lg font-medium">
-                          {new Intl.NumberFormat('vi-VN', {
-                            style: 'currency',
-                            currency: 'VND',
-                          }).format(item.price)}
-                        </span>
-                        <div className="flex items-baseline gap-2">
+                      <p className="mt-1 font-mono text-sm text-muted">{formatPrice(item.price)}</p>
+
+                      <div className="mt-3 flex items-center justify-between">
+                        <div className="flex items-center gap-1 rounded-xl border border-border">
                           <button
-                            onClick={() => {
-                              if (item.qty > 1) {
-                                updateQty(item.id, item.qty - 1);
-                              } else {
-                                updateQty(item.id, 0); // will remove
-                              }
-                            }}
-                            className="flex h-9 w-9 items-center justify-center rounded-md border hover:bg-accent hover:text-accent-foreground"
+                            onClick={() => updateQty(item.id, Math.max(0, item.qty - 1))}
+                            aria-label="Giảm số lượng"
+                            className="grid h-9 w-9 cursor-pointer place-items-center rounded-l-xl text-foreground transition-colors hover:bg-surface-2"
                           >
-                            −
+                            <MinusIcon className="h-4 w-4" />
                           </button>
-                          <span className="w-[3rem] text-center">{item.qty}</span>
+                          <span className="w-9 text-center text-sm font-medium">{item.qty}</span>
                           <button
                             onClick={() => updateQty(item.id, item.qty + 1)}
-                            className="flex h-9 w-9 items-center justify-center rounded-md border hover:bg-accent hover:text-accent-foreground"
+                            aria-label="Tăng số lượng"
+                            className="grid h-9 w-9 cursor-pointer place-items-center rounded-r-xl text-foreground transition-colors hover:bg-surface-2"
                           >
-                            +
+                            <PlusIcon className="h-4 w-4" />
                           </button>
                         </div>
-                        <span className="ml-auto text-lg font-medium">
-                          {new Intl.NumberFormat('vi-VN', {
-                            style: 'currency',
-                            currency: 'VND',
-                          }).format(item.price * item.qty)}
-                        </span>
+                        <span className="font-mono font-semibold">{formatPrice(item.price * item.qty)}</span>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="mt-8 flex flex-col sm:flex-row sm:justify-between">
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Tổng cộng:</p>
-                  <p className="text-2xl font-bold mt-1">
-                    {new Intl.NumberFormat('vi-VN', {
-                      style: 'currency',
-                      currency: 'VND',
-                    }).format(total)}
-                  </p>
+
+              {/* Summary */}
+              <aside className="lg:sticky lg:top-24">
+                <div className="rounded-2xl border border-border bg-surface p-6">
+                  <h2 className="mb-4 font-display text-lg font-semibold">Tóm tắt đơn hàng</h2>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between text-muted">
+                      <span>{count} sản phẩm</span>
+                      <span>{formatPrice(total)}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-border pt-3 text-base font-semibold">
+                      <span>Tổng cộng</span>
+                      <span className="font-mono">{formatPrice(total)}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => router.push('/checkout')}
+                    className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary font-semibold text-white shadow-[0_12px_30px_-12px_var(--glow)] transition-all hover:-translate-y-px hover:bg-primary-strong"
+                  >
+                    Thanh toán <ArrowRightIcon className="h-5 w-5" />
+                  </button>
+                  <Link
+                    href="/products"
+                    className="mt-3 block text-center text-sm text-muted transition-colors hover:text-primary"
+                  >
+                    Tiếp tục mua sắm
+                  </Link>
                 </div>
-                <Link
-                  href="/checkout"
-                  className="mt-6 sm:mt-0 inline-flex h-10 w-full flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors w-full sm:w-auto"
-                >
-                  Thanh toán
-                </Link>
-              </div>
-            </>
+
+                <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted">
+                  <ShieldIcon className="h-4 w-4 text-primary" /> Thanh toán được bảo mật bởi PayOS
+                </p>
+              </aside>
+            </div>
           )}
-        </div>
+        </Container>
       </main>
       <Footer />
     </>

@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { Badge } from '@/components/ui/primitives';
+import { ArrowRightIcon } from '@/components/ui/icons';
 
 interface Product {
   id: string;
@@ -23,59 +25,59 @@ interface ProductCardProps {
   product: Product;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
-  // Format price as VND
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(price);
-  };
+const formatPrice = (price: number) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
+export default function ProductCard({ product }: ProductCardProps) {
   return (
     <Link
       href={`/products/${product.slug}`}
-      className="group block hover:shadow-lg transition-shadow duration-300"
+      aria-label={product.title}
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgb(15_23_42/0.04),0_8px_24px_-16px_rgb(15_23_42/0.18)] transition-all duration-300 hover:-translate-y-1 hover:border-border-strong hover:shadow-[0_24px_50px_-28px_rgb(var(--shadow-color)/0.6)]"
     >
-      <div className="bg-white rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300">
-        {/* Thumbnail */}
+      {/* Thumbnail */}
+      <div className="relative aspect-[4/3] overflow-hidden bg-surface-2">
         {product.thumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={product.thumbnail}
             alt={product.title}
-            className="w-full h-48 object-cover"
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
-          <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
-            <span className="text-gray-500">Không có ảnh</span>
+          <div className="flex h-full w-full items-center justify-center text-sm text-muted-2">
+            Không có ảnh
           </div>
         )}
 
-        {/* Category badge */}
-        {product.category && product.category.name ? (
-          <div className="absolute top-3 left-3 flex items-center space-x-2 rounded-full px-2 py-1 text-xs font-medium bg-indigo-100 text-indigo-800">
-            <span className="dot w-1 h-1 bg-indigo-600 rounded-full"></span>
-            <span>{product.category.name}</span>
-          </div>
-        ) : null}
+        {product.category?.name && (
+          <Badge tone="soft" className="absolute left-3 top-3 backdrop-blur">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            {product.category.name}
+          </Badge>
+        )}
 
-        {/* Content */}
-        <div className="p-4">
-          <h3 className="mb-2 line-clamp-2 text-lg font-semibold text-gray-900 hover:text-indigo-600 transition-colors">
-            {product.title}
-          </h3>
-          <p className="mb-3 line-clamp-3 text-sm text-gray-600">
-            {product.description}
-          </p>
-          <div className="mt-4 flex items-baseline">
-            <span className="font-bold text-xl text-indigo-600">
-              {formatPrice(product.price)}
-            </span>
-            {/* Optional: add a "Mua ngay" button */}
-            {/* <button className="ml-auto px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700">
-              Mua ngay
-            </button> */}
-          </div>
+        <span className="absolute bottom-3 right-3 grid h-9 w-9 place-items-center rounded-full bg-surface/90 text-foreground opacity-0 shadow-sm backdrop-blur transition-all duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
+          <ArrowRightIcon className="h-4 w-4" />
+        </span>
+      </div>
+
+      {/* Content */}
+      <div className="flex flex-1 flex-col p-5">
+        <h3 className="line-clamp-2 font-display text-base font-semibold text-foreground transition-colors group-hover:text-primary">
+          {product.title}
+        </h3>
+        <p className="mt-2 line-clamp-2 flex-1 text-sm leading-relaxed text-muted">
+          {product.description}
+        </p>
+        <div className="mt-4 flex items-center justify-between">
+          <span className="font-mono text-lg font-bold text-foreground">
+            {formatPrice(product.price)}
+          </span>
+          <span className="text-sm font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+            Xem chi tiết
+          </span>
         </div>
       </div>
     </Link>

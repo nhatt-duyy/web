@@ -13,7 +13,7 @@ export default auth((req) => {
 
   if (path.startsWith('/dashboard')) {
     if (!isLoggedIn) {
-      const signInUrl = new URL('/api/auth/signin', nextUrl);
+      const signInUrl = new URL('/login', nextUrl);
       signInUrl.searchParams.set('callbackUrl', path);
       return NextResponse.redirect(signInUrl);
     }

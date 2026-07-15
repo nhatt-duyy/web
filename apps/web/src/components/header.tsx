@@ -5,118 +5,202 @@ import { signIn, signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { cn } from '@/lib/cn';
+import ThemeToggle from '@/components/ui/theme-toggle';
+import { CartIcon, MenuIcon, CloseIcon, ArrowRightIcon, ShoppingBagIcon } from '@/components/ui/icons';
+
+const NAV = [
+  { href: '/', label: 'Trang chủ' },
+  { href: '/products', label: 'Sản phẩm' },
+  { href: '/products?sortBy=price&sortOrder=asc', label: 'Giá tốt' },
+];
+
+function isActive(pathname: string, href: string) {
+  if (href === '/') return pathname === '/';
+  return pathname === href.split('?')[0] && href !== '/';
+}
+
+function Logo() {
+  return (
+    <Link
+      href="/"
+      className="group flex shrink-0 items-center gap-2.5 font-display text-lg font-bold tracking-tight text-foreground"
+    >
+      <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-strong text-sm font-bold text-white shadow-[0_8px_20px_-8px_var(--glow)] ring-1 ring-white/10 transition-transform duration-200 group-hover:-translate-y-0.5">
+        {'</>'}
+      </span>
+      <span>
+        Source<span className="text-gradient">Ban</span>
+      </span>
+    </Link>
+  );
+}
 
 export default function Header() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
-  const cartStore = useCartStore();
+  const cartCount = useCartStore((s) => s.totalItems());
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const cartCount = cartStore.totalItems();
+  const initial = (session?.user?.name ?? session?.user?.email ?? 'B')
+    .trim()
+    .charAt(0)
+    .toUpperCase();
 
   return (
-    <header className="bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-4 px-3 py-4 sm:px-6">
-          {/* Logo */}
-          <div className="flex flex-1 items-center justify-center sm:justify-start">
-            <Link href="/" className="text-xl font-semibold text-indigo-600 hover:text-indigo-500">
-              SourceBan
-            </Link>
-          </div>
+    <header className="sticky top-0 z-50 px-3 pt-3 sm:px-4 sm:pt-4">
+      <div className="glass mx-auto flex max-w-7xl items-center justify-between gap-4 rounded-2xl px-3 py-2.5 sm:px-5 sm:py-3">
+        <Logo />
 
-          {/* Mobile hamburger button */}
-          <div className="flex flex-1 items-center justify-end sm:hidden">
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="px-2 py-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
-            >
-              {/* Hamburger icon */}
-              <svg className="h-5 w-5" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Desktop nav links, cart, and auth */}
-          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-end">
-            {/* Nav links */}
-            <nav className="flex space-x-4 mr-6">
+        {/* Desktop nav */}
+        <nav className="hidden items-center gap-1 md:flex" aria-label="Điều hướng chính">
+          {NAV.map((item) => {
+            const active = isActive(pathname, item.href);
+            return (
               <Link
-                href="/"
-                className={pathname === '/' ? 'text-indigo-600 font-medium' : 'text-gray-500 hover:text-gray-900'}
-              >
-                Trang chủ
-              </Link>
-              <Link
-                href="/products"
-                className={pathname === '/products' ? 'text-indigo-600 font-medium' : 'text-gray-500 hover:text-gray-900'}
-              >
-                Sản phẩm
-              </Link>
-            </nav>
-
-            {/* Cart and Auth */}
-            <div className="flex items-center gap-4">
-              {/* Cart link */}
-              <Link href="/cart" className="relative">
-                <svg className="h-5 w-5 text-gray-600 hover:text-gray-900" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13H5.4m5 6L7 7m3 4v1m-6.231 1.89A6 6 0 014.11 8h0a6 6 0 017.6-3.2 6 6 0 011.153 5.824l-.686.289a6 6 0 01-.998.356A6 6 0 0112 13a6 6 0 01-6 6 6 6 0 01-6-6 6 6 0 016-6z" />
-                </svg>
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-600 text-xs text-white">
-                    {cartCount}
-                  </span>
+                key={item.label}
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'rounded-lg px-3.5 py-2 text-sm font-medium transition-colors',
+                  active
+                    ? 'bg-primary-soft text-primary'
+                    : 'text-muted hover:bg-surface-2 hover:text-foreground',
                 )}
+              >
+                {item.label}
               </Link>
+            );
+          })}
+        </nav>
 
-              {/* Auth */}
-              {status === 'loading' ? (
-                <div className="text-gray-400 animate-spin">Loading</div>
-              ) : status === 'authenticated' ? (
-                <>
-                  <span className="text-gray-600 mr-2">
-                    Xin chào, {session?.user?.name ?? 'Người dùng'}
-                  </span>
-                  <button
-                    onClick={() => signOut({ callbackUrl: '/' })}
-                    className="text-sm text-gray-600 hover:text-gray-900"
-                  >
-                    Đăng xuất
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => signIn('credentials', { callbackUrl: '/' })}
-                  className="text-sm text-gray-600 hover:text-gray-900"
+        {/* Actions */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <ThemeToggle className="hidden sm:inline-flex" />
+
+          <Link
+            href="/cart"
+            aria-label={`Giỏ hàng${cartCount > 0 ? `, ${cartCount} sản phẩm` : ''}`}
+            className="relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-border text-muted transition-colors hover:border-primary hover:text-foreground"
+          >
+            <CartIcon className="h-5 w-5" />
+            {cartCount > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[11px] font-semibold text-white shadow-[0_4px_10px_-4px_var(--glow)]">
+                {cartCount}
+              </span>
+            )}
+          </Link>
+
+          {status === 'loading' ? (
+            <span className="hidden h-10 w-24 animate-pulse-soft rounded-xl bg-surface-2 sm:block" />
+          ) : status === 'authenticated' ? (
+            <div className="hidden items-center gap-2 sm:flex">
+              <Link
+                href="/orders"
+                aria-label="Đơn hàng của tôi"
+                className="relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-border text-muted transition-colors hover:border-primary hover:text-foreground"
+              >
+                <ShoppingBagIcon className="h-5 w-5" />
+              </Link>
+              <span
+                className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-primary to-primary-strong text-sm font-semibold text-white ring-1 ring-white/10"
+                title={session?.user?.name ?? session?.user?.email ?? 'Tài khoản'}
+                aria-hidden="true"
+              >
+                {initial}
+              </span>
+              <button
+                onClick={() => signOut({ callbackUrl: '/' })}
+                className="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
+              >
+                Đăng xuất
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => signIn(undefined, { callbackUrl: '/' })}
+              className="hidden cursor-pointer items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_-12px_var(--glow)] transition-all hover:bg-primary-strong hover:-translate-y-px sm:inline-flex"
+            >
+              Đăng nhập
+            </button>
+          )}
+
+          {/* Mobile menu button */}
+          <button
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-label={mobileOpen ? 'Đóng menu' : 'Mở menu'}
+            aria-expanded={mobileOpen}
+            className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-border text-muted transition-colors hover:border-primary hover:text-foreground md:hidden"
+          >
+            {mobileOpen ? <CloseIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="glass mx-auto mt-2 max-w-7xl rounded-2xl p-3 md:hidden">
+          <nav className="flex flex-col" aria-label="Điều hướng di động">
+            {NAV.map((item) => {
+              const active = isActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'rounded-xl px-3 py-3 text-base font-medium transition-colors',
+                    active
+                      ? 'bg-primary-soft text-primary'
+                      : 'text-muted hover:bg-surface-2 hover:text-foreground',
+                  )}
                 >
-                  Đăng nhập
-                </button>
+                  {item.label}
+                </Link>
+              );
+            })}
+            {status === 'authenticated' && (
+              <Link
+                href="/orders"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 rounded-xl px-3 py-3 text-base font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+              >
+                <ShoppingBagIcon className="h-5 w-5" /> Đơn hàng của tôi
+              </Link>
+            )}
+          </nav>
+          <div className="mt-2 flex items-center justify-between gap-3 border-t border-border pt-3">
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              {status === 'authenticated' && (
+                <span className="text-sm text-muted">{session?.user?.name ?? 'Tài khoản'}</span>
               )}
             </div>
+            {status === 'authenticated' ? (
+              <button
+                onClick={() => {
+                  setMobileOpen(false);
+                  signOut({ callbackUrl: '/' });
+                }}
+                className="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium text-muted hover:text-foreground"
+              >
+                Đăng xuất
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setMobileOpen(false);
+                  signIn(undefined, { callbackUrl: '/' });
+                }}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white"
+              >
+                Đăng nhập <ArrowRightIcon className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
-
-        {/* Mobile menu (when open) */}
-        {mobileOpen && (
-          <div className="lg:hidden mt-4 px-3">
-            <nav className="flex flex-col space-y-2">
-              <Link
-                href="/"
-                className={pathname === '/' ? 'text-indigo-600 font-medium block px-3 py-2 rounded' : 'text-gray-500 hover:text-gray-900 block px-3 py-2 rounded'}
-              >
-                Trang chủ
-              </Link>
-              <Link
-                href="/products"
-                className={pathname === '/products' ? 'text-indigo-600 font-medium block px-3 py-2 rounded' : 'text-gray-500 hover:text-gray-900 block px-3 py-2 rounded'}
-              >
-                Sản phẩm
-              </Link>
-            </nav>
-          </div>
-        )}
-      </div>
+      )}
     </header>
   );
 }
