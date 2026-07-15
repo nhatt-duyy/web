@@ -18,6 +18,23 @@ const ReceiptIcon = () => (
     <path d="M9 8h6M9 12h6" />
   </svg>
 );
+const StarIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3l2.6 5.3 5.9.9-4.2 4.1 1 5.8L12 17l-5.3 2.1 1-5.8L3.5 9.2l5.9-.9L12 3Z" />
+  </svg>
+);
+const TagIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9-9-9Z" />
+    <circle cx="8" cy="8" r="1.4" />
+  </svg>
+);
+const TicketIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1a2 2 0 0 0 0 4v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1a2 2 0 0 0 0-4V9Z" />
+    <path d="M9 7v10" strokeDasharray="2 2" />
+  </svg>
+);
 const LogoutIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" />
@@ -28,6 +45,9 @@ const NAV = [
   { to: '/dashboard', label: 'Tổng quan', icon: <GridIcon /> },
   { to: '/products', label: 'Sản phẩm', icon: <BoxIcon /> },
   { to: '/orders', label: 'Đơn hàng', icon: <ReceiptIcon /> },
+  { to: '/reviews', label: 'Đánh giá', icon: <StarIcon /> },
+  { to: '/coupons', label: 'Mã giảm giá', icon: <TagIcon /> },
+  { to: '/tickets', label: 'Hỗ trợ', icon: <TicketIcon /> },
 ];
 
 const Logo = () => (

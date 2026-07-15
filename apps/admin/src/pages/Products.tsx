@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import apiClient from '../lib/api-client';
-import ProductForm, { CategoryOption, ProductFormValues } from '../components/product-form';
+import ProductForm, { CategoryOption, ProductFormValues, TierFormValue } from '../components/product-form';
 
 type Product = {
   id: string;
@@ -12,6 +12,10 @@ type Product = {
   categoryId: string;
   isPublished: boolean;
   category: { id: string; name: string; slug: string };
+  images?: string[];
+  demoUrl?: string | null;
+  language?: string | null;
+  tiers?: TierFormValue[];
 };
 
 type ProductsResponse = {
@@ -80,6 +84,17 @@ const Products = () => {
       categoryId: p.categoryId,
       isPublished: p.isPublished,
       thumbnail: p.thumbnail ?? '',
+      images: p.images ?? [],
+      demoUrl: p.demoUrl ?? '',
+      language: p.language ?? '',
+      tiers: p.tiers?.map((t) => ({
+        id: t.id,
+        name: t.name,
+        slug: t.slug,
+        price: t.price,
+        description: t.description,
+        sortOrder: t.sortOrder,
+      })),
     });
     setShowForm(true);
   };

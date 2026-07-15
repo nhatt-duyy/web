@@ -7,6 +7,15 @@ export type CategoryOption = {
   slug: string;
 };
 
+export type TierFormValue = {
+  id?: string;
+  name: string;
+  slug: string;
+  price: number;
+  description?: string;
+  sortOrder?: number;
+};
+
 export type ProductFormValues = {
   id?: string;
   title: string;
@@ -15,6 +24,10 @@ export type ProductFormValues = {
   categoryId: string;
   isPublished: boolean;
   thumbnail: string;
+  tiers?: TierFormValue[];
+  images?: string[];
+  demoUrl?: string;
+  language?: string;
 };
 
 type ProductFormProps = {
@@ -31,6 +44,10 @@ const ProductForm = ({ initial, categories, onSaved, onCancel }: ProductFormProp
   const [categoryId, setCategoryId] = useState(initial?.categoryId ?? '');
   const [isPublished, setIsPublished] = useState<boolean>(initial?.isPublished ?? true);
   const [thumbnail, setThumbnail] = useState(initial?.thumbnail ?? '');
+  const [images, setImages] = useState<string[]>(initial?.images ?? []);
+  const [demoUrl, setDemoUrl] = useState(initial?.demoUrl ?? '');
+  const [language, setLanguage] = useState(initial?.language ?? '');
+  const [tiers, setTiers] = useState<TierFormValue[]>(initial?.tiers ?? []);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +77,19 @@ const ProductForm = ({ initial, categories, onSaved, onCancel }: ProductFormProp
     }
   };
 
+  const updateTier = (idx: number, patch: Partial<TierFormValue>) => {
+    setTiers((prev) => prev.map((t, i) => (i === idx ? { ...t, ...patch } : t)));
+  };
+  const addTier = () => {
+    setTiers((prev) => [
+      ...prev,
+      { name: '', slug: '', price: 0, description: '', sortOrder: prev.length },
+    ]);
+  };
+  const removeTier = (idx: number) => {
+    setTiers((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -71,6 +101,19 @@ const ProductForm = ({ initial, categories, onSaved, onCancel }: ProductFormProp
       categoryId,
       isPublished,
       thumbnail: thumbnail || undefined,
+      // Gallery + demo + ngôn ngữ (Phase 2)
+      images: images.filter((u) => u.trim()) ,
+      demoUrl: demoUrl || undefined,
+      language: language || undefined,
+      // Gửi gói license (đa license); backend thay thế toàn bộ khi có mảng này
+      tiers: tiers.map((t) => ({
+        id: t.id,
+        name: t.name,
+        slug: t.slug,
+        price: Number(t.price),
+        description: t.description || undefined,
+        sortOrder: t.sortOrder ?? 0,
+      })),
     };
     try {
       if (initial?.id) {
@@ -168,6 +211,49 @@ const ProductForm = ({ initial, categories, onSaved, onCancel }: ProductFormProp
         )}
       </div>
 
+      <div>
+        <label className="mb-1.5 block text-sm font-medium">Gallery (nhiều ảnh, mỗi URL 1 dòng)</label>
+        <textarea
+          rows={3}
+          value={images.join('\n')}
+          onChange={(e) =>
+            setImages(e.target.value.split('\n').map((u) => u.trim()).filter(Boolean))
+          }
+          className="input resize-y"
+          placeholder="https://.../1.png\nshttps://.../2.png"
+        />
+        {images.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {images.map((u, i) => (
+              <img key={i} src={u} alt={`gallery-${i}`} className="h-16 w-16 rounded-lg border border-border object-cover" />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">Link demo</label>
+          <input
+            type="url"
+            value={demoUrl}
+            onChange={(e) => setDemoUrl(e.target.value)}
+            className="input"
+            placeholder="https://demo.example.com"
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium">Ngôn ngữ (VD: javascript, python)</label>
+          <input
+            type="text"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            className="input"
+            placeholder="javascript"
+          />
+        </div>
+      </div>
+
       <div className="flex items-center gap-2">
         <input
           type="checkbox"
@@ -179,6 +265,86 @@ const ProductForm = ({ initial, categories, onSaved, onCancel }: ProductFormProp
         <label htmlFor="isPublished" className="text-sm">
           Xuất bản (hiển thị trên website)
         </label>
+      </div>
+
+      {/* Editor gói license (đa license Phase 2) */}
+      <div className="rounded-xl border border-border bg-surface/40 p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h4 className="font-display text-sm font-bold">Gói license</h4>
+          <button type="button" onClick={addTier} className="chip text-xs">
+            + Thêm gói
+          </button>
+        </div>
+        {tiers.length === 0 && (
+          <p className="text-sm text-muted-2">Chưa có gói. Mặc định website dùng giá cơ bản bên trên.</p>
+        )}
+        <div className="space-y-3">
+          {tiers.map((t, idx) => (
+            <div key={idx} className="rounded-lg border border-border bg-surface p-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium">Tên gói</label>
+                  <input
+                    required
+                    value={t.name}
+                    onChange={(e) => updateTier(idx, { name: e.target.value })}
+                    className="input"
+                    placeholder="VD: Extended"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium">Slug</label>
+                  <input
+                    required
+                    value={t.slug}
+                    onChange={(e) => updateTier(idx, { slug: e.target.value })}
+                    className="input"
+                    placeholder="extended"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium">Giá (VND)</label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    value={t.price}
+                    onChange={(e) => updateTier(idx, { price: Number(e.target.value) })}
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium">Thứ tự</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={t.sortOrder ?? idx}
+                    onChange={(e) => updateTier(idx, { sortOrder: Number(e.target.value) })}
+                    className="input"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium">Mô tả</label>
+                  <input
+                    value={t.description ?? ''}
+                    onChange={(e) => updateTier(idx, { description: e.target.value })}
+                    className="input"
+                    placeholder="Quyền lợi gói này..."
+                  />
+                </div>
+              </div>
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => removeTier(idx)}
+                  className="text-xs font-medium text-danger transition-colors hover:text-danger-soft"
+                >
+                  Xoá gói
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {error && (
