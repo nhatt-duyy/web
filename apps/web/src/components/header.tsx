@@ -7,7 +7,8 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { cn } from '@/lib/cn';
 import ThemeToggle from '@/components/ui/theme-toggle';
-import { CartIcon, MenuIcon, CloseIcon, ArrowRightIcon, ShoppingBagIcon } from '@/components/ui/icons';
+import SearchBar from '@/components/search-bar';
+import { CartIcon, MenuIcon, CloseIcon, ArrowRightIcon, ShoppingBagIcon, UserIcon } from '@/components/ui/icons';
 
 const NAV = [
   { href: '/', label: 'Trang chủ' },
@@ -51,6 +52,9 @@ export default function Header() {
     <header className="sticky top-0 z-50 px-3 pt-3 sm:px-4 sm:pt-4">
       <div className="glass mx-auto flex max-w-7xl items-center justify-between gap-4 rounded-2xl px-3 py-2.5 sm:px-5 sm:py-3">
         <Logo />
+
+        {/* Desktop search */}
+        <SearchBar className="hidden w-full max-w-sm flex-1 px-2 md:block" />
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex" aria-label="Điều hướng chính">
@@ -96,6 +100,13 @@ export default function Header() {
           ) : status === 'authenticated' ? (
             <div className="hidden items-center gap-2 sm:flex">
               <Link
+                href="/dashboard"
+                aria-label="Bảng điều khiển"
+                className="relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-border text-muted transition-colors hover:border-primary hover:text-foreground"
+              >
+                <UserIcon className="h-5 w-5" />
+              </Link>
+              <Link
                 href="/orders"
                 aria-label="Đơn hàng của tôi"
                 className="relative inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl border border-border text-muted transition-colors hover:border-primary hover:text-foreground"
@@ -140,6 +151,9 @@ export default function Header() {
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="glass mx-auto mt-2 max-w-7xl rounded-2xl p-3 md:hidden">
+          <div className="px-1 pb-2">
+            <SearchBar />
+          </div>
           <nav className="flex flex-col" aria-label="Điều hướng di động">
             {NAV.map((item) => {
               const active = isActive(pathname, item.href);
@@ -161,13 +175,22 @@ export default function Header() {
               );
             })}
             {status === 'authenticated' && (
-              <Link
-                href="/orders"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 rounded-xl px-3 py-3 text-base font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
-              >
-                <ShoppingBagIcon className="h-5 w-5" /> Đơn hàng của tôi
-              </Link>
+              <>
+                <Link
+                  href="/dashboard"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-3 text-base font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                >
+                  <UserIcon className="h-5 w-5" /> Bảng điều khiển
+                </Link>
+                <Link
+                  href="/orders"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-3 text-base font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                >
+                  <ShoppingBagIcon className="h-5 w-5" /> Đơn hàng của tôi
+                </Link>
+              </>
             )}
           </nav>
           <div className="mt-2 flex items-center justify-between gap-3 border-t border-border pt-3">
