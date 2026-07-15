@@ -115,6 +115,22 @@ export class EmailService {
     return this.sendEmail({ to: email, subject, html });
   }
 
+  async sendTicketReplyEmail(email: string, ticket: { subject: string; reply: string }): Promise<void> {
+    const subject = `Phản hồi yêu cầu hỗ trợ: ${ticket.subject}`;
+    const html = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Yêu cầu hỗ trợ của bạn đã được phản hồi</h2>
+        <p><strong>Tiêu đề:</strong> ${ticket.subject}</p>
+        <div style="background: #f4f4f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
+          ${ticket.reply.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')}
+        </div>
+        <p>Bạn có thể xem chi tiết tại <a href="${process.env.WEB_URL || 'http://localhost:3000'}/dashboard/support">trang hỗ trợ</a>.</p>
+        <p>Nếu câu hỏi chưa được giải đáp, vui lòng phản hồi tiếp tại trang hỗ trợ.</p>
+      </div>
+    `.trim();
+    return this.sendEmail({ to: email, subject, html });
+  }
+
   async sendPaymentSuccess(email: string, order: any): Promise<void> {
     const subject = 'Thanh toán thành công';
     const html = `

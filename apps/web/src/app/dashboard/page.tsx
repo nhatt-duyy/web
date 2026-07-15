@@ -224,6 +224,7 @@ function TicketsTab({ api }: { api: ReturnType<typeof useApi> }) {
   const [tickets, setTickets] = useState<any[]>([]);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [priority, setPriority] = useState<'LOW' | 'MEDIUM' | 'HIGH'>('MEDIUM');
   const [submitting, setSubmitting] = useState(false);
   const [formMsg, setFormMsg] = useState<string | null>(null);
 
@@ -259,7 +260,7 @@ function TicketsTab({ api }: { api: ReturnType<typeof useApi> }) {
       const res = await api('/tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, message }),
+        body: JSON.stringify({ subject, message, priority }),
       });
       if (!res.ok) {
         const d = await res.json();
@@ -316,6 +317,21 @@ function TicketsTab({ api }: { api: ReturnType<typeof useApi> }) {
               placeholder="Mô tả chi tiết vấn đề bạn gặp phải..."
             />
           </div>
+          <div>
+            <label htmlFor="ticket-priority" className="mb-1.5 block text-sm font-medium">
+              Mức độ ưu tiên
+            </label>
+            <select
+              id="ticket-priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as 'LOW' | 'MEDIUM' | 'HIGH')}
+              className="input"
+            >
+              <option value="LOW">Thấp</option>
+              <option value="MEDIUM">Trung bình</option>
+              <option value="HIGH">Cao</option>
+            </select>
+          </div>
           {formMsg && (
             <p className="text-sm text-primary" role="status">
               {formMsg}
@@ -342,7 +358,10 @@ function TicketsTab({ api }: { api: ReturnType<typeof useApi> }) {
             <div key={t.id} className="rounded-2xl border border-border bg-surface p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-display text-base font-semibold">{t.subject}</p>
-                <Badge tone={statusTone(t.status)}>{t.status}</Badge>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-2">{t.priority || 'MEDIUM'}</span>
+                  <Badge tone={statusTone(t.status)}>{t.status}</Badge>
+                </div>
               </div>
               <p className="mt-2 whitespace-pre-wrap text-sm text-muted">{t.message}</p>
               {t.reply && (
