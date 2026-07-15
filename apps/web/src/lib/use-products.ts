@@ -20,6 +20,25 @@ export interface Product {
     slug: string;
   } | null;
   isPublished: boolean;
+  images?: string[];
+  demoUrl?: string | null;
+  docs?: { title: string; url: string }[] | null;
+  changelog?: { version: string; date: string; notes: string }[] | null;
+  tiers?: {
+    id: string;
+    name: string;
+    slug: string;
+    price: number;
+    description: string | null;
+    features: string[];
+  }[];
+  reviews?: {
+    id: string;
+    rating: number;
+    comment: string | null;
+    user: { name: string | null };
+    createdAt: string;
+  }[];
   createdAt: string;
   updatedAt: string;
 }

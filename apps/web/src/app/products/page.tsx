@@ -1,51 +1,106 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 import ProductGrid from '@/components/product-grid';
-import Filters from '@/components/filters';
+import Filters, { type LanguageOption } from '@/components/filters';
 import useProducts from '@/lib/use-products';
+import useSearch, { type SearchProduct } from '@/lib/use-search';
 import { Container, Skeleton, EmptyState } from '@/components/ui/primitives';
 import { ChevronLeftIcon, ChevronRightIcon, SearchIcon } from '@/components/ui/icons';
 
-export default function ProductsPage() {
+// Chuyển document MeiliSearch về đúng shape ProductCard mong đợi
+function toProductCard(p: SearchProduct) {
+  return {
+    id: p.id,
+    slug: p.slug,
+    title: p.title,
+    description: p.description,
+    price: p.price,
+    thumbnail: p.thumbnail,
+    fileKey: null,
+    categoryId: p.categoryId,
+    category: { id: p.categoryId, name: p.categoryName, slug: '' },
+    isPublished: p.isPublished,
+    createdAt: new Date(p.createdAt).toISOString(),
+    updatedAt: new Date(p.createdAt).toISOString(),
+  };
+}
+
+function ProductsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Query tìm kiếm từ URL (?q=)
+  const q = searchParams.get('q') ?? '';
+
   const [categories, setCategories] = useState<{ slug: string; name: string }[]>([]);
+  const [languages, setLanguages] = useState<LanguageOption[]>([]);
   const [categorySlug, setCategorySlug] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'createdAt' | 'price'>('createdAt');
+  const [language, setLanguage] = useState<string>(''); // '' = tất cả ngôn ngữ
+  const [sortBy, setSortBy] = useState<'createdAt' | 'price' | '_text_match'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [minPrice, setMinPrice] = useState<number | undefined>(undefined);
+  const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
   const [page, setPage] = useState<number>(1);
   const limit = 12;
 
   useEffect(() => {
-    async function fetchCategories() {
+    async function fetchFilters() {
       try {
         const res = await fetch('/api/categories');
-        if (!res.ok) {
-          setCategories([]);
-          return;
+        if (res.ok) {
+          const data: { id: string; slug: string; name: string }[] = await res.json();
+          setCategories(data);
         }
-        const data: { id: string; slug: string; name: string }[] = await res.json();
-        setCategories(data);
       } catch {
-        setCategories([]);
+        /* ignore */
+      }
+      try {
+        const res = await fetch('/api/products/languages');
+        if (res.ok) {
+          const data: LanguageOption[] = await res.json();
+          setLanguages(data);
+        }
+      } catch {
+        /* ignore */
       }
     }
-    fetchCategories();
+    fetchFilters();
   }, []);
 
+  // Reset trang khi đổi bất kỳ bộ lọc nào
   useEffect(() => {
     setPage(1);
-  }, [categorySlug, sortBy, sortOrder]);
+  }, [q, categorySlug, language, sortBy, sortOrder, minPrice, maxPrice]);
 
-  const { data: products, total, loading, error } = useProducts({
+  // Luôn gọi 2 hook (rules of hooks); chọn kết quả theo chế độ
+  const productsQuery = useProducts({
     category: categorySlug || undefined,
+    sortBy: sortBy === '_text_match' ? 'createdAt' : (sortBy as 'createdAt' | 'price'),
+    sortOrder,
+    limit,
+    page,
+  });
+
+  const searchQuery = useSearch({
+    q,
+    category: categorySlug || undefined,
+    language: language || undefined,
+    minPrice,
+    maxPrice,
     sortBy,
     sortOrder,
     limit,
     page,
   });
+
+  const isSearch = q.trim().length > 0;
+  const { data: rawData, total, loading, error } = isSearch ? searchQuery : productsQuery;
+  const products = isSearch ? (rawData as SearchProduct[]).map(toProductCard) : (rawData as any[]);
 
   const totalPages = Math.ceil(total / limit);
 
@@ -56,49 +111,30 @@ export default function ProductsPage() {
     if (page < totalPages) setPage(page + 1);
   };
 
-  if (loading) {
-    return (
-      <>
-        <Header />
-        <main className="min-h-[calc(100vh-14rem)] py-10">
-          <Container>
-            <Skeleton className="mb-6 h-9 w-48" />
-            <Skeleton className="mb-8 h-12 w-full max-w-2xl" />
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="overflow-hidden rounded-2xl border border-border bg-surface">
-                  <Skeleton className="aspect-[4/3] w-full rounded-none" />
-                  <div className="space-y-3 p-5">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-full" />
-                    <Skeleton className="h-5 w-1/3" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Container>
-        </main>
-        <Footer />
-      </>
-    );
-  }
+  const resetFilters = () => {
+    setCategorySlug('');
+    setLanguage('');
+    setSortBy('createdAt');
+    setSortOrder('desc');
+    setMinPrice(undefined);
+    setMaxPrice(undefined);
+    router.push('/products');
+  };
 
-  if (error) {
-    return (
-      <>
-        <Header />
-        <main className="min-h-[calc(100vh-14rem)] py-10">
-          <Container>
-            <h1 className="mb-6 text-3xl font-bold tracking-tight sm:text-4xl">Sản phẩm</h1>
-            <div className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-danger">
-              Lỗi khi tải sản phẩm: {error.message}
-            </div>
-          </Container>
-        </main>
-        <Footer />
-      </>
-    );
-  }
+  const skeleton = (
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="overflow-hidden rounded-2xl border border-border bg-surface">
+          <Skeleton className="aspect-[4/3] w-full rounded-none" />
+          <div className="space-y-3 p-5">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-5 w-1/3" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <>
@@ -117,7 +153,11 @@ export default function ProductsPage() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Sản phẩm</h1>
               <p className="mt-2 text-muted">
-                {total > 0 ? `${total} source code có sẵn` : 'Khám phá bộ sưu tập source code'}
+                {isSearch
+                  ? `Kết quả cho "${q}" — ${total} source code`
+                  : total > 0
+                    ? `${total} source code có sẵn`
+                    : 'Khám phá bộ sưu tập source code'}
               </p>
             </div>
           </div>
@@ -125,16 +165,31 @@ export default function ProductsPage() {
           <Filters
             categories={categories}
             category={categorySlug}
+            languages={languages}
+            language={language}
             sortBy={sortBy}
             sortOrder={sortOrder}
+            minPrice={minPrice}
+            maxPrice={maxPrice}
             onCategoryChange={setCategorySlug}
+            onLanguageChange={setLanguage}
             onSortChange={(by, order) => {
               setSortBy(by);
               setSortOrder(order);
             }}
+            onPriceChange={(min, max) => {
+              setMinPrice(min);
+              setMaxPrice(max);
+            }}
           />
 
-          {products.length > 0 ? (
+          {loading ? (
+            skeleton
+          ) : error ? (
+            <div className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-danger">
+              Lỗi khi tải sản phẩm: {error.message}
+            </div>
+          ) : products.length > 0 ? (
             <>
               <ProductGrid products={products} />
 
@@ -166,14 +221,14 @@ export default function ProductsPage() {
             <EmptyState
               icon={<SearchIcon className="h-7 w-7" />}
               title="Không có sản phẩm nào phù hợp"
-              description="Thử đổi danh mục hoặc bộ sắp xếp để xem thêm lựa chọn."
+              description={
+                isSearch
+                  ? 'Thử từ khoá khác hoặc bỏ bớt bộ lọc.'
+                  : 'Thử đổi danh mục hoặc bộ sắp xếp để xem thêm lựa chọn.'
+              }
               action={
                 <button
-                  onClick={() => {
-                    setCategorySlug('');
-                    setSortBy('createdAt');
-                    setSortOrder('desc');
-                  }}
+                  onClick={resetFilters}
                   className="inline-flex h-11 cursor-pointer items-center rounded-xl bg-primary px-5 text-sm font-semibold text-white transition-all hover:bg-primary-strong"
                 >
                   Xóa bộ lọc
@@ -185,5 +240,13 @@ export default function ProductsPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function ProductsPageExport() {
+  return (
+    <Suspense fallback={null}>
+      <ProductsPage />
+    </Suspense>
   );
 }
