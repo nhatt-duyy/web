@@ -6,27 +6,40 @@ export interface CartItem {
   title: string;
   price: number;
   thumbnail: string | null;
+  tierId: string | null;
+  tierName: string | null;
   qty: number;
 }
 
 interface CartState {
   items: CartItem[];
-  addItem: (product: Partial<CartItem> & Pick<CartItem, 'id' | 'slug' | 'title' | 'price' | 'thumbnail'>, qty?: number) => void;
-  removeItem: (id: string) => void;
+  // tierId/tierName phân biệt gói license khi chọn mua
+  addItem: (
+    product: Partial<CartItem> &
+      Pick<CartItem, 'id' | 'slug' | 'title' | 'price' | 'thumbnail'>,
+    qty?: number
+  ) => void;
+  removeItem: (id: string, tierId?: string | null) => void;
   clear: () => void;
   totalItems: () => number;
-  updateQty: (id: string, qty: number) => void;
+  updateQty: (id: string, qty: number, tierId?: string | null) => void;
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   addItem: (product, qty = 1) => {
     set((state) => {
-      const existingItem = state.items.find((item) => item.id === product.id);
+      // Cùng sản phẩm nhưng gói license khác nhau => 2 dòng riêng biệt
+      const lineKey = (item: CartItem) =>
+        `${item.id}::${item.tierId ?? ''}`;
+      const targetKey = `${product.id}::${product.tierId ?? ''}`;
+      const existingItem = state.items.find(
+        (item) => lineKey(item) === targetKey,
+      );
       if (existingItem) {
         return {
           items: state.items.map((item) =>
-            item.id === product.id
+            lineKey(item) === targetKey
               ? { ...item, qty: item.qty + qty }
               : item
           ),
@@ -39,15 +52,19 @@ export const useCartStore = create<CartState>((set, get) => ({
               ...product,
               qty,
               thumbnail: product.thumbnail ?? null,
+              tierId: product.tierId ?? null,
+              tierName: product.tierName ?? null,
             } as CartItem,
           ],
         };
       }
     });
   },
-  removeItem: (id) => {
+  removeItem: (id, tierId = null) => {
     set((state) => ({
-      items: state.items.filter((item) => item.id !== id),
+      items: state.items.filter(
+        (item) => !(item.id === id && (item.tierId ?? null) === (tierId ?? null)),
+      ),
     }));
   },
   clear: () => {
@@ -56,20 +73,26 @@ export const useCartStore = create<CartState>((set, get) => ({
   totalItems: () => {
     return get().items.reduce((sum, item) => sum + item.qty, 0);
   },
-  updateQty: (id, qty) => {
+  updateQty: (id, qty, tierId = null) => {
     set((state) => {
-      const existingItem = state.items.find((item) => item.id === id);
+      const existingItem = state.items.find(
+        (item) => item.id === id && (item.tierId ?? null) === (tierId ?? null),
+      );
       if (!existingItem) return state; // item not found, do nothing
       if (qty <= 0) {
         // remove item
         return {
-          items: state.items.filter((item) => item.id !== id),
+          items: state.items.filter(
+            (item) => !(item.id === id && (item.tierId ?? null) === (tierId ?? null)),
+          ),
         };
       } else {
         // update quantity
         return {
           items: state.items.map((item) =>
-            item.id === id ? { ...item, qty } : item
+            item.id === id && (item.tierId ?? null) === (tierId ?? null)
+              ? { ...item, qty }
+              : item
           ),
         };
       }
