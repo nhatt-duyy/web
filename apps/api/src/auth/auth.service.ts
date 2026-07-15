@@ -26,6 +26,8 @@ export class AuthService {
   async login(dto: { email: string; password: string }) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (!user || !user.passwordHash) throw new UnauthorizedException('Sai thông tin');
+    // Chặn tài khoản bị khóa (CRM Mục 3)
+    if (user.isActive === false) throw new UnauthorizedException('Tài khoản đã bị khóa');
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
     if (!ok) throw new UnauthorizedException('Sai thông tin');
     return this.signToken(user);

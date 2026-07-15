@@ -1,5 +1,6 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { canAccess } from '../lib/rbac';
 
 const GridIcon = () => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -35,6 +36,18 @@ const TicketIcon = () => (
     <path d="M9 7v10" strokeDasharray="2 2" />
   </svg>
 );
+const DocIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" />
+    <path d="M14 4v5h5" /><path d="M8 13h8M8 17h6" />
+  </svg>
+);
+const UsersIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+    <path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
 const LogoutIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" />
@@ -47,7 +60,9 @@ const NAV = [
   { to: '/orders', label: 'Đơn hàng', icon: <ReceiptIcon /> },
   { to: '/reviews', label: 'Đánh giá', icon: <StarIcon /> },
   { to: '/coupons', label: 'Mã giảm giá', icon: <TagIcon /> },
+  { to: '/posts', label: 'Bài viết', icon: <DocIcon /> },
   { to: '/tickets', label: 'Hỗ trợ', icon: <TicketIcon /> },
+  { to: '/users', label: 'Khách hàng', icon: <UsersIcon /> },
 ];
 
 const Logo = () => (
@@ -59,6 +74,7 @@ const Logo = () => (
 
 export const Layout = () => {
   const { user, logout } = useAuth();
+  const role = user?.role as 'CUSTOMER' | 'STAFF' | 'ADMIN' | undefined;
   const initials = (user?.name ?? user?.email ?? 'A').slice(0, 1).toUpperCase();
 
   return (
@@ -69,7 +85,7 @@ export const Layout = () => {
           <Logo />
         </div>
         <nav className="flex-1 space-y-1 p-3">
-          {NAV.map((item) => (
+          {NAV.filter((item) => canAccess(item.to, role)).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
