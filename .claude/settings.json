@@ -3,6 +3,7 @@
     "superpowers@claude-plugins-official": true,
     "superpowers@superpowers-marketplace": true,
     "ui-ux-pro-max@ui-ux-pro-max-skill": true,
-    "claude-mem@thedotmack": true
+    "claude-mem@thedotmack": true,
+    "ecc@ecc": true
   }
 }
