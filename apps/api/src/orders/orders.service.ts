@@ -7,6 +7,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderStatus, PaymentProvider, Product, License } from '@prisma/client';
 import * as crypto from 'crypto';
+import { generateLicenseKey } from '../licenses/license-key.util';
 
 @Injectable()
 export class OrdersService {
@@ -279,7 +280,7 @@ export class OrdersService {
               orderItemId: item.id,
               productId: item.productId,
               licenseTierId: item.licenseTierId ?? null,
-              key: this.genLicenseKey(),
+              key: generateLicenseKey(),
               downloadCount: 0,
               downloadLimit: 5,
             },
@@ -303,11 +304,6 @@ export class OrdersService {
 
       return updatedOrder;
     });
-  }
-
-  private genLicenseKey(): string {
-    // Generate a random 32-character hex string (16 bytes)
-    return crypto.randomBytes(16).toString('hex');
   }
 
   async findByProviderRef(code: string): Promise<import('@prisma/client').Order | null> {

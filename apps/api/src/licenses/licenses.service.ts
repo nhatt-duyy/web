@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../database/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { AuditService } from '../audit/audit.service';
+import { isValidLicenseKeyFormat } from './license-key.util';
 
 // Số ngày giữa các lần reset lượt tải
 const RESET_DAYS = 30;
@@ -47,6 +48,11 @@ export class LicensesService {
       include: { product: { select: { fileKey: true, title: true } } },
     });
     if (!license) throw new NotFoundException('Không tìm thấy license');
+
+    // Phase 5: chặn tải nếu license bị thu hồi
+    if (license.status === 'REVOKED') {
+      throw new ForbiddenException('License đã bị thu hồi, không thể tải');
+    }
 
     const now = new Date();
     const resetAt = new Date(license.downloadResetAt);
@@ -95,6 +101,56 @@ export class LicensesService {
       downloadLimit: license.downloadLimit,
       resetAt: needsReset ? now : license.downloadResetAt,
     };
+  }
+
+  // Xác minh license key (public API — cho client/3rd-party verify độc lập)
+  // Trả về kết quả mà KHÔNG lộ key raw.
+  async verifyKey(key: string): Promise<{
+    valid: boolean;
+    reason?: 'BAD_FORMAT' | 'NOT_FOUND' | 'REVOKED' | 'EXPIRED';
+    licenseId?: string;
+    productId?: string;
+    tierId?: string | null;
+  }> {
+    // Bước 1: kiểm tra định dạng + checksum (offline, không cần DB)
+    if (!isValidLicenseKeyFormat(key)) {
+      return { valid: false, reason: 'BAD_FORMAT' };
+    }
+
+    const license = await this.prisma.license.findUnique({ where: { key } });
+    if (!license) return { valid: false, reason: 'NOT_FOUND' };
+    if (license.status === 'REVOKED') return { valid: false, reason: 'REVOKED' };
+    if (license.expiresAt && license.expiresAt.getTime() < Date.now()) {
+      return { valid: false, reason: 'EXPIRED' };
+    }
+
+    return {
+      valid: true,
+      licenseId: license.id,
+      productId: license.productId,
+      tierId: license.licenseTierId,
+    };
+  }
+
+  // Thu hồi license (admin). Ghi audit để truy vết.
+  async revoke(id: string, adminId?: string) {
+    const license = await this.prisma.license.findUnique({ where: { id } });
+    if (!license) throw new NotFoundException('Không tìm thấy license');
+    if (license.status === 'REVOKED') {
+      return { id, status: 'REVOKED', revoked: false, message: 'License đã bị thu hồi từ trước' };
+    }
+    const updated = await this.prisma.license.update({
+      where: { id },
+      data: { status: 'REVOKED' },
+    });
+    await this.audit.log({
+      userId: adminId,
+      action: 'LICENSE_REVOKE',
+      entity: 'License',
+      entityId: id,
+      meta: { productId: license.productId, key: license.key },
+    });
+    return { id, status: updated.status, revoked: true, message: 'Đã thu hồi license' };
   }
 
   // Cron hằng đêm: reset các license đã quá kỳ 30 ngày (chủ động)

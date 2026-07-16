@@ -13,6 +13,11 @@ enum Role {
   ADMIN
 }
 
+enum LicenseStatus {
+  ACTIVE
+  REVOKED
+}
+
 enum OrderStatus {
   PENDING
   PAID
@@ -156,6 +161,8 @@ model License {
   licenseTierId String?      // gói license (Phase 2)
   tier      LicenseTier? @relation(fields: [licenseTierId], references: [id])
   key       String   @unique
+  status    LicenseStatus @default(ACTIVE) // Phase 5: thu hồi license
+  expiresAt DateTime?     // Phase 5: hạn dùng (null = vĩnh viễn)
   downloadCount  Int  @default(0)
   downloadLimit  Int  @default(5)  // giới hạn tải (Phase 2)
   downloadResetAt DateTime @default(now()) // mốc reset định kỳ 1 tháng
