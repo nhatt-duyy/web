@@ -12,8 +12,9 @@ export class EmailService {
     this.from = this.configService.get<string>('EMAIL_FROM') || 'no-reply@sourceban.com';
 
     if (apiKey) {
-      const resend = require('resend');
-      this.resend = resend(apiKey);
+      const resendModule = require('resend');
+      const Resend = resendModule.Resend || resendModule.default || resendModule;
+      this.resend = new Resend(apiKey);
       this.logger.log('Resend email service initialized');
     } else {
       this.logger.warn('RESEND_API_KEY not set, email service will run in stub mode (logging only)');
