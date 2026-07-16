@@ -132,13 +132,32 @@ export class EmailService {
   }
 
   async sendPaymentSuccess(email: string, order: any): Promise<void> {
-    const subject = 'Thanh toán thành công';
+    const webUrl = process.env.WEB_URL || 'http://localhost:3000';
+    const subject = 'Thanh toán thành công — Source code đã sẵn sàng tải về';
+
+    // Danh sách sản phẩm kèm link tải source code trực tiếp
+    const items = Array.isArray(order.licenses)
+      ? order.licenses
+      : order.items ?? [];
+    const productList = items
+      .map((lic: any) => {
+        const title = lic.product?.title ?? lic.title ?? 'Sản phẩm';
+        const downloadUrl = `${webUrl}/dashboard/orders/${order.id}`;
+        return `<li style="margin: 8px 0;">
+          <strong>${title}</strong><br/>
+          <a href="${downloadUrl}" style="color:#2563eb;">⬇️ Tải source code tại đây</a>
+        </li>`;
+      })
+      .join('');
+
     const html = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Thanh toán thành công!</h2>
-        <p>Cảm ơn bạn đã thanh toán đơn hàng #${order.id}. Đơn hàng của bạn đã được xác nhận và đang được xử lý.</p>
-        <p>Bạn có thể xem chi tiết đơn hàng và tải xuống tài nguyên tại <a href="${process.env.WEB_URL || 'http://localhost:3000'}/dashboard/orders/${order.id}">trang đơn hàng của bạn</a>.</p>
-        <p>Nếu có bất kỳ câu hỏi nào, vui lòng trả lời email này hoặc liên hệ qua trang hỗ trợ.</p>
+        <h2>🎉 Thanh toán thành công!</h2>
+        <p>Cảm ơn bạn đã thanh toán đơn hàng <strong>#${order.id}</strong>. Source code của bạn đã sẵn sàng để tải về.</p>
+        <p><strong>Danh sách source code:</strong></p>
+        <ul style="padding-left: 18px;">${productList || '<li>Không có sản phẩm</li>'}</ul>
+        <p>Bạn cũng có thể xem chi tiết và lịch sử tải tại <a href="${webUrl}/dashboard/orders/${order.id}">trang đơn hàng của bạn</a>.</p>
+        <p style="color:#64748b; font-size:13px;">Lưu ý: mỗi license có giới hạn lượt tải, vui lòng tải và lưu trữ cẩn thận.</p>
       </div>
     `.trim();
     return this.sendEmail({ to: email, subject, html });

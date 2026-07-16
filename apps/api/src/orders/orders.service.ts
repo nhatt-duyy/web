@@ -260,6 +260,9 @@ export class OrdersService {
               product: true,
             },
           },
+          licenses: {
+            include: { product: { select: { title: true, slug: true } } },
+          },
           user: true,
         },
       });

@@ -165,8 +165,16 @@ export class PaymentsService {
         return;
       }
       if (payment && !payment.milestoneId && payment.orderId) {
-        // Thanh toán đơn hàng (fallback)
-        await this.ordersService.confirmPayment(payment.orderId);
+        // Thanh toán đơn hàng (luồng chính)
+        const order = await this.ordersService.confirmPayment(payment.orderId);
+        try {
+          const userEmail = (order as any).user?.email;
+          if (userEmail) {
+            await this.emailService.sendPaymentSuccess(userEmail, order);
+          }
+        } catch (error: any) {
+          this.logger.error('Failed to send payment success email:', error);
+        }
         return;
       }
       // Fallback cũ: tìm Order qua providerRef
