@@ -135,6 +135,12 @@ export class OrdersService {
       console.error('Failed to send order confirmation email:', error);
     }
 
+    // Đơn giá 0đ (miễn phí) → cấp license luôn, không cần thanh toán PayOS
+    if (total === 0) {
+      const freeOrder = await this.confirmPayment(order!.id);
+      return freeOrder;
+    }
+
     return order;
   }
 
@@ -230,7 +236,9 @@ export class OrdersService {
     });
   }
 
-  async confirmPayment(orderId: string): Promise<import('@prisma/client').Order> {
+  async confirmPayment(
+    orderId: string,
+  ): Promise<import('@prisma/client').Order & { items: any[] }> {
     return this.prisma.$transaction(async (tx) => {
       // First, get the order with items to know what licenses to create
       const order = await tx.order.findUnique({

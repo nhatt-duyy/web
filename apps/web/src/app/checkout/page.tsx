@@ -93,6 +93,12 @@ export default function CheckoutPage() {
       const orderData = await orderResponse.json();
       const orderId = orderData.id;
 
+      // Đơn giá 0đ (miễn phí) → backend đã cấp license, không cần thanh toán
+      if (orderData.total === 0) {
+        window.location.href = '/orders';
+        return;
+      }
+
       const paymentResponse = await api('/payments/payos/create', {
         method: 'POST',
         body: JSON.stringify({ orderId }),
