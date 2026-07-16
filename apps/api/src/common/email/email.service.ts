@@ -1,35 +1,39 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private resend: any;
+  private transporter: nodemailer.Transporter | null = null;
   private from: string;
 
   constructor(private configService: ConfigService) {
-    const apiKey = this.configService.get<string>('RESEND_API_KEY');
-    this.from = this.configService.get<string>('EMAIL_FROM') || 'no-reply@sourceban.com';
+    const gmailUser = this.configService.get<string>('GMAIL_USER');
+    const gmailPass = this.configService.get<string>('GMAIL_APP_PASSWORD');
+    this.from = this.configService.get<string>('EMAIL_FROM') || gmailUser || 'no-reply@sourceban.com';
 
-    if (apiKey) {
-      const resendModule = require('resend');
-      const Resend = resendModule.Resend || resendModule.default || resendModule;
-      this.resend = new Resend(apiKey);
-      this.logger.log('Resend email service initialized');
+    if (gmailUser && gmailPass) {
+      // Gửi qua Gmail SMTP (App Password) — thay thế Resend
+      this.transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user: gmailUser, pass: gmailPass },
+      });
+      this.logger.log(`Gmail SMTP email service initialized (from: ${this.from})`);
     } else {
-      this.logger.warn('RESEND_API_KEY not set, email service will run in stub mode (logging only)');
+      this.logger.warn('GMAIL_USER / GMAIL_APP_PASSWORD not set, email service will run in stub mode (logging only)');
     }
   }
 
   private async sendEmail(options: { to: string; subject: string; html: string }): Promise<void> {
-    if (!this.resend) {
+    if (!this.transporter) {
       this.logger.warn(`Email stub: to=${options.to}, subject=${options.subject}`);
       this.logger.warn(`Email stub HTML: ${options.html}`);
       return;
     }
 
     try {
-      await this.resend.emails.send({
+      await this.transporter.sendMail({
         from: this.from,
         to: options.to,
         subject: options.subject,
