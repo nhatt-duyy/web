@@ -346,7 +346,7 @@ export class CustomProjectsService {
         items: [{ productId: milestone.id, title: milestone.name, price: milestone.amount, qty: 1 }],
       },
       {
-        description: `SourceBan - ${milestone.name} (Dự án ${milestone.project.title})`,
+        description: `SB - ${milestone.name}`.slice(0, 25),
         returnUrl: (await this.getWebUrl()) + `/dashboard/projects/${projectId}?paid=${milestone.id}`,
         cancelUrl: (await this.getWebUrl()) + `/dashboard/projects/${projectId}`,
         isMilestone: true,

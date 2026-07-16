@@ -31,6 +31,10 @@ export class PaymentsService {
         'Thiếu cấu hình PayOS (PAYOS_CLIENT_ID, PAYOS_API_KEY, PAYOS_CHECKSUM_KEY). Các chức năng thanh toán sẽ không hoạt động.',
       );
     } else {
+      // PayOS SDK v2.0.5 ép đọc trực tiếp process.env.PAYOS_* nên phải gán trước khi init
+      process.env.PAYOS_CLIENT_ID = clientId;
+      process.env.PAYOS_API_KEY = apiKey;
+      process.env.PAYOS_CHECKSUM_KEY = checksumKey;
       this.payos = new PayOS({
         clientId,
         apiKey,
@@ -82,7 +86,7 @@ export class PaymentsService {
     const paymentLink = await payos.paymentRequests.create({
       orderCode,
       amount: order.total,
-      description: opts?.description ?? `SourceBan #${order.id}`,
+      description: (opts?.description ?? `SourceBan #${order.id}`).slice(0, 25),
       returnUrl: opts?.returnUrl ?? webUrl + '/checkout/return',
       cancelUrl: opts?.cancelUrl ?? webUrl + '/checkout/cancel',
       items: order.items.map(item => ({
