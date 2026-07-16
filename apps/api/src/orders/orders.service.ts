@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException 
 import { PrismaService } from '../database/prisma.service';
 import { EmailService } from '../common/email/email.service';
 import { CouponsService } from '../coupons/coupons.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { OrderStatus, PaymentProvider, Product, License } from '@prisma/client';
@@ -13,6 +14,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly couponsService: CouponsService,
+    private readonly audit: AuditService,
   ) {}
 
   async create(dto: CreateOrderDto, userId: string) {
@@ -289,6 +291,15 @@ export class OrdersService {
           }
         }
       }
+
+      // Ghi audit: đơn hàng đã thanh toán thành công
+      await this.audit.log({
+        userId: order.userId,
+        action: 'ORDER_PAID',
+        entity: 'Order',
+        entityId: order.id,
+        meta: { total: updatedOrder.total, itemCount: order.items.length },
+      });
 
       return updatedOrder;
     });

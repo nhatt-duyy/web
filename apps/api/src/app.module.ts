@@ -18,6 +18,7 @@ import { TicketsModule } from './tickets/tickets.module';
 import { UsersModule } from './users/users.module';
 import { PostsModule } from './posts/posts.module';
 import { CustomProjectsModule } from './custom-projects/custom-projects.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { CustomProjectsModule } from './custom-projects/custom-projects.module';
     UsersModule,
     PostsModule,
     CustomProjectsModule,
+    AuditModule,
   ],
 })
 export class AppModule {}

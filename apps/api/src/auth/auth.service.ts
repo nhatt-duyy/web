@@ -4,6 +4,7 @@ import * as crypto from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../database/prisma.service';
 import { EmailService } from '../common/email/email.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class AuthService {
@@ -11,6 +12,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private email: EmailService,
+    private audit: AuditService,
   ) {}
 
   async register(dto: { email: string; password: string; name: string }) {
@@ -20,16 +22,27 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: { email: dto.email, name: dto.name, passwordHash, role: 'CUSTOMER' },
     });
+    await this.audit.log({ userId: user.id, action: 'REGISTER', entity: 'User', entityId: user.id });
     return this.signToken(user);
   }
 
-  async login(dto: { email: string; password: string }) {
+  async login(dto: { email: string; password: string }, ip?: string) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    if (!user || !user.passwordHash) throw new UnauthorizedException('Sai thông tin');
+    if (!user || !user.passwordHash) {
+      await this.audit.log({ userId: user?.id, action: 'LOGIN_FAIL', entity: 'User', entityId: user?.id, ip, meta: { email: dto.email } });
+      throw new UnauthorizedException('Sai thông tin');
+    }
     // Chặn tài khoản bị khóa (CRM Mục 3)
-    if (user.isActive === false) throw new UnauthorizedException('Tài khoản đã bị khóa');
+    if (user.isActive === false) {
+      await this.audit.log({ userId: user.id, action: 'LOGIN_FAIL', entity: 'User', entityId: user.id, ip, meta: { email: dto.email, reason: 'locked' } });
+      throw new UnauthorizedException('Tài khoản đã bị khóa');
+    }
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!ok) throw new UnauthorizedException('Sai thông tin');
+    if (!ok) {
+      await this.audit.log({ userId: user.id, action: 'LOGIN_FAIL', entity: 'User', entityId: user.id, ip, meta: { email: dto.email } });
+      throw new UnauthorizedException('Sai thông tin');
+    }
+    await this.audit.log({ userId: user.id, action: 'LOGIN_SUCCESS', entity: 'User', entityId: user.id, ip });
     return this.signToken(user);
   }
 

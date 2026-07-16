@@ -2,6 +2,7 @@ import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/commo
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../database/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { AuditService } from '../audit/audit.service';
 
 // Số ngày giữa các lần reset lượt tải
 const RESET_DAYS = 30;
@@ -11,6 +12,7 @@ export class LicensesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly audit: AuditService,
   ) {}
 
   // Danh sách license của user đang đăng nhập (kèm sản phẩm + gói)
@@ -75,10 +77,21 @@ export class LicensesService {
       where: { id },
       data: { downloadCount: { increment: 1 } },
     });
+    const newCount = license.downloadCount + 1;
     const url = await this.storage.getSignedUrl(license.product.fileKey);
+
+    // Ghi audit: ai tải license nào của sản phẩm gì
+    await this.audit.log({
+      userId,
+      action: 'LICENSE_DOWNLOAD',
+      entity: 'License',
+      entityId: id,
+      meta: { productId: license.productId, count: newCount },
+    });
+
     return {
       url,
-      downloadCount: license.downloadCount + 1,
+      downloadCount: newCount,
       downloadLimit: license.downloadLimit,
       resetAt: needsReset ? now : license.downloadResetAt,
     };

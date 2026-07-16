@@ -412,3 +412,18 @@ model Payment {
   @@index([milestoneId])
   @@index([projectId])
 }
+
+// Audit Log (Phase 5 - M4): ghi nhận hành động nhạy cảm để truy vết
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?  // null nếu hành động trước khi login (vd LOGIN_FAIL)
+  action    String   // LOGIN_SUCCESS, LOGIN_FAIL, LICENSE_DOWNLOAD, ORDER_PAID, PROJECT_STATUS_CHANGE, MILESTONE_PAID
+  entity    String?  // 'User' | 'License' | 'Order' | 'CustomProject' | 'Milestone'
+  entityId  String?
+  ip        String?
+  meta      Json?    // { email, productId, oldStatus, newStatus, amount... }
+  createdAt DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@index([userId, createdAt])
+}

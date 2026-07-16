@@ -10,6 +10,7 @@ import { PrismaService } from '../database/prisma.service';
 import { Prisma } from '@prisma/client';
 import { PaymentsService } from '../payments/payments.service';
 import { EmailService } from '../common/email/email.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
@@ -32,6 +33,7 @@ export class CustomProjectsService {
     @Inject(forwardRef(() => PaymentsService))
     private readonly paymentsService: PaymentsService,
     private readonly emailService: EmailService,
+    private readonly audit: AuditService,
   ) {}
 
   // ============ 1. YÊU CẦU BÁO GIÁ (public) ============
@@ -222,6 +224,13 @@ export class CustomProjectsService {
     // Nếu đổi status → trigger email + notification cho khách
     if (dto.status && dto.status !== existing.status) {
       await this.notifyStatusChange(updated, dto.status);
+      await this.audit.log({
+        userId: updated.userId,
+        action: 'PROJECT_STATUS_CHANGE',
+        entity: 'CustomProject',
+        entityId: id,
+        meta: { oldStatus: existing.status, newStatus: dto.status },
+      });
     }
     return updated;
   }
@@ -402,6 +411,20 @@ export class CustomProjectsService {
     } catch (err) {
       this.logger.error('Gửi email milestone paid lỗi:', err);
     }
+
+    // Ghi audit: milestone dự án custom đã thanh toán
+    await this.audit.log({
+      userId: milestone.project.userId,
+      action: 'MILESTONE_PAID',
+      entity: 'Milestone',
+      entityId: milestone.id,
+      meta: {
+        projectId: milestone.project.id,
+        milestoneName: milestone.name,
+        amount: milestone.amount,
+      },
+    });
+
     return milestone;
   }
 
