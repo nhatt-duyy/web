@@ -48,6 +48,12 @@ const UsersIcon = () => (
     <path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
   </svg>
 );
+const ProjectIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M3 9h18M9 4v16M15 4v16" />
+  </svg>
+);
 const LogoutIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" />
@@ -62,6 +68,7 @@ const NAV = [
   { to: '/coupons', label: 'Mã giảm giá', icon: <TagIcon /> },
   { to: '/posts', label: 'Bài viết', icon: <DocIcon /> },
   { to: '/tickets', label: 'Hỗ trợ', icon: <TicketIcon /> },
+  { to: '/custom-projects', label: 'Dự án Custom', icon: <ProjectIcon /> },
   { to: '/users', label: 'Khách hàng', icon: <UsersIcon /> },
 ];
 

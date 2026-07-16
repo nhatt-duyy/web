@@ -12,6 +12,8 @@ export const ROLE_ACCESS: Record<string, Role[]> = {
   '/reviews': ['ADMIN'],
   '/coupons': ['ADMIN'],
   '/tickets': ['ADMIN', 'STAFF'],
+  // Mục 3 (Phase 4): Kanban board dự án Custom — ADMIN + STAFF.
+  '/custom-projects': ['ADMIN', 'STAFF'],
   // Mục 3 / Mục 5 sẽ tạo trang, nhưng quyền đã chốt ở đây:
   '/users': ['ADMIN'],
   '/posts': ['ADMIN'],

@@ -11,6 +11,7 @@ import Coupons from './pages/Coupons';
 import Tickets from './pages/Tickets';
 import Users from './pages/Users';
 import Posts from './pages/Posts';
+import CustomProjects from './pages/CustomProjects';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
         <Route path="/reviews" element={<ProtectedRoute allowedRoles={['ADMIN'] as Role[]}><Reviews /></ProtectedRoute>} />
         <Route path="/coupons" element={<ProtectedRoute allowedRoles={['ADMIN'] as Role[]}><Coupons /></ProtectedRoute>} />
         <Route path="/tickets" element={<ProtectedRoute allowedRoles={['ADMIN', 'STAFF'] as Role[]}><Tickets /></ProtectedRoute>} />
+        <Route path="/custom-projects" element={<ProtectedRoute allowedRoles={['ADMIN', 'STAFF'] as Role[]}><CustomProjects /></ProtectedRoute>} />
         <Route path="/users" element={<ProtectedRoute allowedRoles={['ADMIN'] as Role[]}><Users /></ProtectedRoute>} />
         <Route path="/posts" element={<ProtectedRoute allowedRoles={['ADMIN'] as Role[]}><Posts /></ProtectedRoute>} />
       </Route>
