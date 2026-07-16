@@ -11,6 +11,9 @@
     "prisma:seed": "ts-node prisma/seed.ts",
     "test": "jest"
   },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1086.0",
     "@aws-sdk/s3-request-presigner": "^3.1086.0",

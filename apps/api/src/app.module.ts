@@ -17,6 +17,7 @@ import { LicensesModule } from './licenses/licenses.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { UsersModule } from './users/users.module';
 import { PostsModule } from './posts/posts.module';
+import { CustomProjectsModule } from './custom-projects/custom-projects.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { PostsModule } from './posts/posts.module';
     TicketsModule,
     UsersModule,
     PostsModule,
+    CustomProjectsModule,
   ],
 })
 export class AppModule {}
