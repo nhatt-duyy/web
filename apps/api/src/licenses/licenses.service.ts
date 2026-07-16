@@ -4,6 +4,7 @@ import { PrismaService } from '../database/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { AuditService } from '../audit/audit.service';
 import { EncryptionService } from '../common/encryption/encryption.service';
+import { WatermarkService } from '../common/watermark/watermark.service';
 import { isValidLicenseKeyFormat } from './license-key.util';
 
 // Số ngày giữa các lần reset lượt tải
@@ -16,6 +17,7 @@ export class LicensesService {
     private readonly storage: StorageService,
     private readonly audit: AuditService,
     private readonly encryption: EncryptionService,
+    private readonly watermark: WatermarkService,
   ) {}
 
   // Danh sách license của user đang đăng nhập (kèm sản phẩm + gói)
@@ -112,7 +114,11 @@ export class LicensesService {
   async streamDecrypted(userId: string, id: string): Promise<Buffer> {
     const license = await this.prisma.license.findFirst({
       where: { id, userId },
-      include: { product: { select: { fileKey: true, title: true } } },
+      include: {
+        product: { select: { fileKey: true, title: true, slug: true } },
+        user: { select: { email: true } },
+        order: { select: { id: true } },
+      },
     });
     if (!license) throw new NotFoundException('Không tìm thấy license');
     if (license.status === 'REVOKED') {
@@ -123,11 +129,24 @@ export class LicensesService {
     }
 
     const blob = await this.storage.getObjectBuffer(license.product.fileKey);
-    // Back-compat: file chưa mã hóa (.enc) thì trả thẳng, ngược lại decrypt.
-    if (license.product.fileKey.endsWith('.enc')) {
-      return this.encryption.decrypt(blob);
+    // Back-compat: file chưa mã hóa (.enc) thì decrypt, ngược lại dùng raw.
+    let plain = license.product.fileKey.endsWith('.enc')
+      ? this.encryption.decrypt(blob)
+      : blob;
+
+    // M3 Watermark: nếu là zip → gắn WATERMARK.txt truy vết chủ sở hữu.
+    // File không phải zip (hiếm) → trả raw, không watermark (back-compat).
+    if (plain.length >= 4 && plain.subarray(0, 4).toString('hex') === '504b0304') {
+      plain = await this.watermark.addWatermark(plain, {
+        key: license.key,
+        licenseId: license.id,
+        email: license.user.email,
+        productTitle: license.product.title,
+        productSlug: license.product.slug,
+        orderId: license.order?.id ?? license.id,
+      });
     }
-    return blob;
+    return plain;
   }
 
   // Xác minh license key (public API — cho client/3rd-party verify độc lập)
