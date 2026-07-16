@@ -80,7 +80,7 @@ function RegisterForm() {
   return (
     <div className="rounded-2xl border border-border bg-surface/70 p-7 shadow-[var(--shadow-card)] backdrop-blur sm:p-8">
       <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Tạo tài khoản</h1>
-      <p className="mt-2 text-sm text-muted">Tham gia SourceBan để tải source code và theo dõi đơn hàng.</p>
+      <p className="mt-2 text-sm text-muted">Tham gia Nhat Duy Market để tải source code và theo dõi đơn hàng.</p>
 
       <div className="mt-6 grid grid-cols-2 gap-3">
         <button
@@ -196,7 +196,7 @@ function RegisterForm() {
 
         <p className="flex items-start gap-2 text-xs text-muted">
           <ShieldIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          Bằng việc đăng ký, bạn đã đồng ý với Điều khoản & Chính sách bảo mật của SourceBan.
+          Bằng việc đăng ký, bạn đã đồng ý với Điều khoản & Chính sách bảo mật của Nhat Duy Market.
         </p>
 
         <button

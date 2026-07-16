@@ -9,10 +9,10 @@ import { QuoteIcon, CheckCircleIcon, BoltIcon, ShieldIcon } from '@/components/u
 export const metadata: Metadata = {
   title: 'Báo giá dịch vụ phát triển phần mềm',
   description:
-    'Gửi yêu cầu báo giá cho dịch vụ thiết kế web app, mobile app, phần mềm máy tính, extension và tích hợp API. Nhận tư vấn và báo giá chi tiết từ đội ngũ SourceBan.',
+    'Gửi yêu cầu báo giá cho dịch vụ thiết kế web app, mobile app, phần mềm máy tính, extension và tích hợp API. Nhận tư vấn và báo giá chi tiết từ đội ngũ Nhat Duy Market.',
   keywords: ['báo giá', 'dịch vụ lập trình', 'thuê dev', 'web app', 'mobile app', 'tích hợp API'],
   openGraph: {
-    title: 'Báo giá dịch vụ phát triển phần mềm · SourceBan',
+    title: 'Báo giá dịch vụ phát triển phần mềm · Nhat Duy Market',
     description:
       'Mô tả nhu cầu của bạn, chúng tôi sẽ liên hệ báo giá chi tiết và tư vấn giải pháp phù hợp.',
     locale: 'vi_VN',
@@ -46,7 +46,7 @@ export default function BaoGiaPage() {
               <SectionHeading
                 eyebrow="Dịch vụ Custom"
                 title="Báo giá dịch vụ phát triển"
-                description="Điền thông tin dự án, đội ngũ SourceBan sẽ tư vấn giải pháp và gửi báo giá chi tiết. Hoàn toàn miễn phí, không cam kết."
+                description="Điền thông tin dự án, đội ngũ Nhat Duy Market sẽ tư vấn giải pháp và gửi báo giá chi tiết. Hoàn toàn miễn phí, không cam kết."
               />
               <ul className="mt-8 space-y-5">
                 {BENEFITS.map((b) => (

@@ -30,13 +30,13 @@ export async function generateMetadata({
   }
   const desc = project.request?.description
     ? project.request.description.slice(0, 160)
-    : `Case study ${project.title} — ${PROJECT_TYPE_LABELS[project.request?.type ?? 'OTHER']} do SourceBan phát triển.`;
+    : `Case study ${project.title} — ${PROJECT_TYPE_LABELS[project.request?.type ?? 'OTHER']} do Nhat Duy Market phát triển.`;
   return {
     title: project.title,
     description: desc,
     keywords: ['case study', project.title, PROJECT_TYPE_LABELS[project.request?.type ?? 'OTHER']],
     openGraph: {
-      title: `${project.title} · SourceBan`,
+      title: `${project.title} · Nhat Duy Market`,
       description: desc,
       locale: 'vi_VN',
       type: 'article',
@@ -66,7 +66,7 @@ function buildJsonLd(project: ShowcaseDetail) {
     name: project.title,
     applicationCategory: PROJECT_TYPE_LABELS[project.request?.type ?? 'OTHER'],
     description: project.request?.description ?? project.description ?? '',
-    author: { '@type': 'Organization', name: 'SourceBan' },
+    author: { '@type': 'Organization', name: 'Nhat Duy Market' },
     ...(project.user?.name ? { contributor: project.user.name } : {}),
     ...(project.quotedAmount ? { offers: { '@type': 'Offer', price: project.quotedAmount, priceCurrency: 'VND' } } : {}),
     ...(project.files?.[0]?.fileKey

@@ -84,7 +84,7 @@ const TESTIMONIALS = [
     name: 'Trần Thị Lan',
     role: 'Founder · Hà Nội',
     quote:
-      'SourceBan giúp team mình ship tính năng nhanh gấp 2 lần. Kho source được kiểm duyệt kỹ nên yên tâm dùng cho khách hàng.',
+      'Nhat Duy Market giúp team mình ship tính năng nhanh gấp 2 lần. Kho source được kiểm duyệt kỹ nên yên tâm dùng cho khách hàng.',
   },
   {
     name: 'Lê Hoàng Anh',
@@ -334,8 +334,8 @@ export default function HomePage() {
             <Reveal>
               <SectionHeading
                 align="center"
-                eyebrow="Tại sao SourceBan"
-                title="Tại sao chọn SourceBan?"
+                eyebrow="Tại sao Nhat Duy Market"
+                title="Tại sao chọn Nhat Duy Market?"
                 description="Chúng tôi xây dựng nền tảng mua bán source code tin cậy nhất cho developer Việt."
               />
             </Reveal>

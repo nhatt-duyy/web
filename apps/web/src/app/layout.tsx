@@ -24,13 +24,13 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://sourceban.com'),
+  metadataBase: new URL('https://nhatduymarket.com'),
   title: {
-    default: 'SourceBan — Chợ source code & dịch vụ dev số 1 Việt Nam',
-    template: '%s · SourceBan',
+    default: 'Nhat Duy Market — Chợ source code & dịch vụ dev số 1 Việt Nam',
+    template: '%s · Nhat Duy Market',
   },
   description:
-    'SourceBan là chợ source code chất lượng cao và dịch vụ phát triển phần mềm. Tải ngay, thanh toán an toàn qua PayOS, hỗ trợ tận tâm.',
+    'Nhat Duy Market là chợ source code chất lượng cao và dịch vụ phát triển phần mềm. Tải ngay, thanh toán an toàn qua PayOS, hỗ trợ tận tâm.',
   keywords: [
     'source code',
     'mua source code',
@@ -42,19 +42,19 @@ export const metadata: Metadata = {
     'Next.js',
     'React',
   ],
-  authors: [{ name: 'SourceBan' }],
+  authors: [{ name: 'Nhat Duy Market' }],
   openGraph: {
     type: 'website',
     locale: 'vi_VN',
-    url: 'https://sourceban.com',
-    siteName: 'SourceBan',
-    title: 'SourceBan — Chợ source code & dịch vụ dev số 1 Việt Nam',
+    url: 'https://nhatduymarket.com',
+    siteName: 'Nhat Duy Market',
+    title: 'Nhat Duy Market — Chợ source code & dịch vụ dev số 1 Việt Nam',
     description:
       'Mua bán source code chất lượng cao và dịch vụ phát triển phần mềm. Thanh toán an toàn, hỗ trợ tận tâm.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SourceBan — Chợ source code & dịch vụ dev số 1 Việt Nam',
+    title: 'Nhat Duy Market — Chợ source code & dịch vụ dev số 1 Việt Nam',
     description: 'Mua bán source code chất lượng cao và dịch vụ phát triển phần mềm.',
   },
   robots: { index: true, follow: true },

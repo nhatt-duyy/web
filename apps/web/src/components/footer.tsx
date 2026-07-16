@@ -85,7 +85,7 @@ export default function Footer() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 sm:flex-row">
           <p className="text-sm text-muted-2">
-            &copy; {new Date().getFullYear()} SourceBan. Mọi quyền được bảo lưu.
+            &copy; {new Date().getFullYear()} Nhat Duy Market. Mọi quyền được bảo lưu.
           </p>
           <div className="flex items-center gap-4">
             <ThemeToggle />
@@ -93,7 +93,7 @@ export default function Footer() {
               href="https://github.com"
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="GitHub của SourceBan"
+              aria-label="GitHub của Nhat Duy Market"
               className="grid h-9 w-9 place-items-center rounded-xl border border-border text-muted transition-colors hover:border-primary hover:text-foreground"
             >
               <GithubIcon className="h-4 w-4" />

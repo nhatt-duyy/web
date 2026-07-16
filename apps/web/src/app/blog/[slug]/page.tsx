@@ -51,7 +51,7 @@ export default async function BlogDetailPage({ params }: Params) {
             )}
             <h1 className="mt-2 text-3xl font-bold text-foreground sm:text-4xl">{post.title}</h1>
             <div className="mt-3 flex items-center gap-2 text-sm text-muted-2">
-              <span>{post.author?.name ?? 'SourceBan'}</span>
+              <span>{post.author?.name ?? 'Nhat Duy Market'}</span>
               {post.publishedAt && (
                 <>
                   <span>·</span>

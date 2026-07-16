@@ -11,7 +11,7 @@ function fmtDate(v: string | null) {
 
 export const metadata = {
   title: 'Blog',
-  description: 'Bài viết, hướng dẫn và tin tức mới nhất từ SourceBan về source code & phát triển phần mềm.',
+  description: 'Bài viết, hướng dẫn và tin tức mới nhất từ Nhat Duy Market về source code & phát triển phần mềm.',
 };
 
 export default async function BlogPage() {
@@ -22,7 +22,7 @@ export default async function BlogPage() {
       <Header />
       <main className="py-10">
         <Container>
-          <SectionHeading eyebrow="Kiến thức & Tin tức" title="Blog SourceBan" className="mb-8" />
+          <SectionHeading eyebrow="Kiến thức & Tin tức" title="Blog Nhat Duy Market" className="mb-8" />
           {posts.length === 0 ? (
             <p className="text-muted">Chưa có bài viết nào.</p>
           ) : (
@@ -55,7 +55,7 @@ export default async function BlogPage() {
                     </h3>
                     {p.excerpt && <p className="line-clamp-2 text-sm text-muted">{p.excerpt}</p>}
                     <div className="mt-auto flex items-center gap-2 pt-3 text-xs text-muted-2">
-                      <span>{p.author?.name ?? 'SourceBan'}</span>
+                      <span>{p.author?.name ?? 'Nhat Duy Market'}</span>
                       {p.publishedAt && (
                         <>
                           <span>·</span>

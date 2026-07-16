@@ -19,10 +19,10 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: 'Dự án đã thực hiện',
   description:
-    'Portfolio các dự án phần mềm đã bàn giao bởi SourceBan: web app, mobile app, phần mềm máy tính, extension và tích hợp API cho khách hàng.',
-  keywords: ['dự án', 'portfolio', 'case study', 'web app', 'mobile app', 'SourceBan'],
+    'Portfolio các dự án phần mềm đã bàn giao bởi Nhat Duy Market: web app, mobile app, phần mềm máy tính, extension và tích hợp API cho khách hàng.',
+  keywords: ['dự án', 'portfolio', 'case study', 'web app', 'mobile app', 'Nhat Duy Market'],
   openGraph: {
-    title: 'Dự án đã thực hiện · SourceBan',
+    title: 'Dự án đã thực hiện · Nhat Duy Market',
     description:
       'Khám phá các dự án phần mềm thực tế chúng tôi đã thiết kế và phát triển cho khách hàng.',
     locale: 'vi_VN',
@@ -123,7 +123,7 @@ export default async function DuAnPage({
             <p className="mt-2 text-muted">
               {headingType
                 ? `Các case study ${headingType.toLowerCase()} đã bàn giao.`
-                : 'Những dự án phần mềm thực tế SourceBan đã thiết kế, phát triển và bàn giao.'}
+                : 'Những dự án phần mềm thực tế Nhat Duy Market đã thiết kế, phát triển và bàn giao.'}
             </p>
           </div>
 

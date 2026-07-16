@@ -57,7 +57,7 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
           </ul>
         </div>
 
-        <p className="relative text-xs text-muted-2">© 2026 SourceBan · Được bảo mật bởi PayOS</p>
+        <p className="relative text-xs text-muted-2">© 2026 Nhat Duy Market · Được bảo mật bởi PayOS</p>
       </aside>
 
       {/* Right — form panel */}
