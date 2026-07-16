@@ -217,6 +217,22 @@ export function Input({
   return <input className={cn('input', className)} {...props} />;
 }
 
+/* ---------------- Textarea ---------------- */
+export function Textarea({
+  className,
+  ...props
+}: { className?: string } & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      className={cn(
+        'w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm font-medium text-foreground transition-colors placeholder:text-muted-2 hover:border-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 /* ---------------- Select ---------------- */
 export function Select({
   className,

@@ -13,6 +13,8 @@ import { CartIcon, MenuIcon, CloseIcon, ArrowRightIcon, ShoppingBagIcon, UserIco
 const NAV = [
   { href: '/', label: 'Trang chủ' },
   { href: '/products', label: 'Sản phẩm' },
+  { href: '/du-an', label: 'Dự án' },
+  { href: '/bao-gia', label: 'Báo giá' },
   { href: '/blog', label: 'Blog' },
   { href: '/products?sortBy=price&sortOrder=asc', label: 'Giá tốt' },
 ];
