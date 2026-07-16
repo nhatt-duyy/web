@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Body, Query, Req } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -14,6 +15,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @Throttle({ default: { ttl: 60000, limit: 5 } }) // 5 lần/phút/IP — chặn brute-force
   login(@Req() req: Request, @Body() dto: LoginDto) {
     return this.auth.login(dto, req.ip);
   }

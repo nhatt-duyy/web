@@ -1,4 +1,5 @@
 import { Controller, Post, Body, Req, UseGuards, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PaymentsService } from './payments.service';
@@ -56,6 +57,7 @@ export class PaymentsController {
    */
   @Post('payos/webhook')
   @HttpCode(HttpStatus.OK)
+  @SkipThrottle() // PayOS phải luôn gọi được, không bị giới hạn tần suất
   async handleWebhook(@Req() req: Request & { rawBody?: string }) {
     // The raw body is set by the middleware in main.ts
     const rawBody = req.rawBody ?? '';
