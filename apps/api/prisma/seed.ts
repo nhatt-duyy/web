@@ -246,17 +246,165 @@ async function main() {
     });
   }
 
+  // ===== SEED: Module Dịch vụ Custom (Phase 4) =====
+  const req1 = await prisma.customProjectRequest.upsert({
+    where: { id: 'seed-req-1' },
+    update: {},
+    create: {
+      id: 'seed-req-1',
+      userId: demoUser.id,
+      type: 'WEB_APP',
+      title: 'Website đặt món nhà hàng online',
+      description:
+        'Cần làm website đặt món cho chuỗi nhà hàng 3 chi nhánh, tích hợp menu động, giỏ hàng, thanh toán và quản lý đơn từ đầu bếp. Ưu tiên Next.js + PostgreSQL.',
+      budget: 30000000,
+      deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 45),
+      status: 'QUOTING',
+    },
+  });
+
+  const req2 = await prisma.customProjectRequest.upsert({
+    where: { id: 'seed-req-2' },
+    update: {},
+    create: {
+      id: 'seed-req-2',
+      userId: demoUser.id,
+      type: 'MOBILE_APP',
+      title: 'App di động quản lý kho bằng barcode',
+      description:
+        'App Android/iOS quét mã barcode để nhập xuất kho, đồng bộ thời gian thực với web admin. Cần báo giá trọn gói.',
+      budget: 45000000,
+      status: 'NEW',
+    },
+  });
+
+  const showcaseReq = await prisma.customProjectRequest.upsert({
+    where: { id: 'seed-req-showcase' },
+    update: {},
+    create: {
+      id: 'seed-req-showcase',
+      userId: demoUser.id,
+      type: 'WEB_APP',
+      title: 'SaaS CRM nhỏ cho agency',
+      description:
+        'Xây dựng SaaS CRM quản lý khách hàng, pipeline bán hàng, báo cáo doanh thu cho agency marketing. Tích hợp email outreach và automation cơ bản.',
+      budget: 80000000,
+      status: 'DELIVERED',
+    },
+  });
+
+  const showcasedProject = await prisma.customProject.upsert({
+    where: { id: 'seed-project-showcase' },
+    update: { status: 'DELIVERED', isShowcase: true },
+    create: {
+      id: 'seed-project-showcase',
+      requestId: showcaseReq.id,
+      userId: demoUser.id,
+      assigneeId: staffUser.id,
+      title: 'SaaS CRM nhỏ cho agency',
+      description:
+        'Xây dựng SaaS CRM quản lý khách hàng, pipeline bán hàng, báo cáo doanh thu cho agency marketing. Tích hợp email outreach và automation cơ bản.',
+      status: 'DELIVERED',
+      quotedAmount: 80000000,
+      priority: 'HIGH',
+      warrantyMonths: 3,
+      isShowcase: true,
+      slug: 'saas-crm-agency',
+    },
+  });
+
+  const milestones = [
+    { name: 'Đặt cọc 30%', amount: 24000000, percent: 30, status: 'PAID' as const, sortOrder: 0 },
+    { name: 'Giữa kỳ 40%', amount: 32000000, percent: 40, status: 'PAID' as const, sortOrder: 1 },
+    { name: 'Bàn giao 30%', amount: 24000000, percent: 30, status: 'PAID' as const, sortOrder: 2 },
+  ];
+  for (const m of milestones) {
+    await prisma.milestone.upsert({
+      where: { id: `seed-ms-${showcasedProject.id}-${m.sortOrder}` },
+      update: { status: m.status },
+      create: {
+        id: `seed-ms-${showcasedProject.id}-${m.sortOrder}`,
+        projectId: showcasedProject.id,
+        name: m.name,
+        amount: m.amount,
+        percent: m.percent,
+        status: m.status,
+        sortOrder: m.sortOrder,
+        paidAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * (10 - m.sortOrder * 3)),
+      },
+    });
+  }
+
+  await prisma.projectMessage.upsert({
+    where: { id: 'seed-msg-1' },
+    update: {},
+    create: {
+      id: 'seed-msg-1',
+      projectId: showcasedProject.id,
+      senderId: staffUser.id,
+      content: 'Chào bạn, dự án CRM đã hoàn thiện phase 1, mời bạn xem bản demo.',
+      isFromStaff: true,
+    },
+  });
+  await prisma.projectMessage.upsert({
+    where: { id: 'seed-msg-2' },
+    update: {},
+    create: {
+      id: 'seed-msg-2',
+      projectId: showcasedProject.id,
+      senderId: demoUser.id,
+      content: 'Cảm ơn, giao diện rất ổn. Mình duyệt bàn giao nhé.',
+      isFromStaff: false,
+    },
+  });
+
+  await prisma.projectFile.upsert({
+    where: { id: 'seed-file-1' },
+    update: {},
+    create: {
+      id: 'seed-file-1',
+      projectId: showcasedProject.id,
+      uploaderId: staffUser.id,
+      kind: 'DELIVERABLE',
+      name: 'CRM-Demo-Overview.png',
+      fileKey: thumb('CRM Demo', '#3b82f6', '#6366f1'),
+      version: 1,
+      size: 12345,
+    },
+  });
+
+  await prisma.customProject.upsert({
+    where: { id: 'seed-project-req1' },
+    update: { status: 'QUOTING' },
+    create: {
+      id: 'seed-project-req1',
+      requestId: req1.id,
+      userId: demoUser.id,
+      assigneeId: staffUser.id,
+      title: 'Website đặt món nhà hàng online',
+      description: req1.description,
+      status: 'QUOTING',
+      quotedAmount: 30000000,
+      priority: 'MEDIUM',
+      warrantyMonths: 3,
+      isShowcase: false,
+    },
+  });
+
   const [c, n] = await Promise.all([prisma.category.count(), prisma.product.count()]);
-  const [tierCount, reviewCount, couponCount, postCount, ticketCount, userCount] = await Promise.all([
-    prisma.licenseTier.count(),
-    prisma.review.count(),
-    prisma.coupon.count(),
-    prisma.post.count(),
-    prisma.ticket.count(),
-    prisma.user.count(),
-  ]);
+  const [tierCount, reviewCount, couponCount, postCount, ticketCount, userCount, projectCount, reqCount] =
+    await Promise.all([
+      prisma.licenseTier.count(),
+      prisma.review.count(),
+      prisma.coupon.count(),
+      prisma.post.count(),
+      prisma.ticket.count(),
+      prisma.user.count(),
+      prisma.customProject.count(),
+      prisma.customProjectRequest.count(),
+    ]);
   console.log(
-    `Seed xong: ${userCount} user, ${c} danh mục, ${n} sản phẩm, ${tierCount} gói license, ${reviewCount} review, ${couponCount} coupon, ${postCount} bài viết, ${ticketCount} ticket.`,
+    `Seed xong: ${userCount} user, ${c} danh mục, ${n} sản phẩm, ${tierCount} gói license, ${reviewCount} review, ${couponCount} coupon, ${postCount} bài viết, ${ticketCount} ticket, ${reqCount} yêu cầu custom, ${projectCount} dự án custom.`,
   );
 }
 
