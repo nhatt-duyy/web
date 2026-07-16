@@ -143,4 +143,61 @@ export class EmailService {
     `.trim();
     return this.sendEmail({ to: email, subject, html });
   }
+
+  /** Thông báo cho admin khi có yêu cầu báo giá mới */
+  async sendCustomRequestNotify(
+    email: string,
+    req: { title: string; type: string; budget?: number | null; contactName: string; contactEmail: string },
+  ): Promise<void> {
+    const formatVND = (amount?: number | null) =>
+      amount
+        ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
+        : 'Thỏa thuận';
+    const subject = `[SourceBan] Yêu cầu báo giá mới: ${req.title}`;
+    const html = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Yêu cầu báo giá mới</h2>
+        <p><strong>Tiêu đề:</strong> ${req.title}</p>
+        <p><strong>Loại dự án:</strong> ${req.type}</p>
+        <p><strong>Ngân sách:</strong> ${formatVND(req.budget)}</p>
+        <p><strong>Người liên hệ:</strong> ${req.contactName} (${req.contactEmail})</p>
+        <p>Vui lòng đăng nhập admin để xem chi tiết và phản hồi.</p>
+      </div>
+    `.trim();
+    return this.sendEmail({ to: email, subject, html });
+  }
+
+  /** Thông báo cho khách khi trạng thái dự án thay đổi */
+  async sendProjectUpdateEmail(
+    email: string,
+    project: { title: string; status: string },
+  ): Promise<void> {
+    const subject = `Cập nhật dự án: ${project.title}`;
+    const html = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Dự án của bạn đã cập nhật</h2>
+        <p>Dự án <strong>${project.title}</strong> đã chuyển sang trạng thái: <strong>${project.status}</strong>.</p>
+        <p>Bạn có thể xem chi tiết tiến độ tại <a href="${process.env.WEB_URL || 'http://localhost:3000'}/dashboard/projects">trang dự án của tôi</a>.</p>
+      </div>
+    `.trim();
+    return this.sendEmail({ to: email, subject, html });
+  }
+
+  /** Xác nhận khách đã thanh toán thành công một milestone */
+  async sendMilestonePaidEmail(
+    email: string,
+    data: { projectTitle: string; milestoneName: string; amount: number },
+  ): Promise<void> {
+    const formatVND = (amount: number) =>
+      new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+    const subject = `Đã nhận thanh toán: ${data.milestoneName} (${data.projectTitle})`;
+    const html = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Cảm ơn bạn đã thanh toán</h2>
+        <p>Chúng tôi đã nhận được <strong>${formatVND(data.amount)}</strong> cho mốc <strong>${data.milestoneName}</strong> thuộc dự án <strong>${data.projectTitle}</strong>.</p>
+        <p>Đội ngũ sẽ tiếp tục triển khai theo tiến độ. Bạn có thể theo dõi tại <a href="${process.env.WEB_URL || 'http://localhost:3000'}/dashboard/projects">trang dự án của tôi</a>.</p>
+      </div>
+    `.trim();
+    return this.sendEmail({ to: email, subject, html });
+  }
 }
