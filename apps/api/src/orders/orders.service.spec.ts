@@ -3,6 +3,7 @@ import { OrdersService } from './orders.service';
 import { PrismaService } from '../database/prisma.service';
 import { EmailService } from '../common/email/email.service';
 import { CouponsService } from '../coupons/coupons.service';
+import { AuditService } from '../audit/audit.service';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { OrderStatus, PaymentProvider } from '@prisma/client';
 
@@ -39,6 +40,8 @@ describe('OrdersService', () => {
     sendVerificationEmail: jest.fn(),
   };
 
+  const mockAuditService = { log: jest.fn().mockResolvedValue(undefined) };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -46,6 +49,7 @@ describe('OrdersService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: EmailService, useValue: mockEmailService },
         { provide: CouponsService, useValue: { validate: jest.fn() } },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
 

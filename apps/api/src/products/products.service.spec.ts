@@ -1,11 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { PrismaService } from '../database/prisma.service';
 import { SearchService } from '../search/search.service';
+import { StorageService } from '../storage/storage.service';
+import { EncryptionService } from '../common/encryption/encryption.service';
 
 describe('ProductsService', () => {
   let service: ProductsService;
   let prisma: PrismaService;
+  let storage: StorageService;
+  let encryption: EncryptionService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -35,11 +40,27 @@ describe('ProductsService', () => {
             initIndex: jest.fn(),
           },
         },
+        {
+          provide: StorageService,
+          useValue: {
+            getObjectBuffer: jest.fn(),
+            putObjectBuffer: jest.fn(),
+          },
+        },
+        {
+          provide: EncryptionService,
+          useValue: {
+            encrypt: jest.fn(),
+            decrypt: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<ProductsService>(ProductsService);
     prisma = module.get<PrismaService>(PrismaService);
+    storage = module.get<StorageService>(StorageService);
+    encryption = module.get<EncryptionService>(EncryptionService);
   });
 
   it('should be defined', () => {
@@ -185,6 +206,68 @@ describe('ProductsService', () => {
           isPublished: true,
         },
       });
+    });
+  });
+
+  describe('encryptSource (Phase 5)', () => {
+    it('throw NotFound nếu product không tồn tại', async () => {
+      jest.spyOn(prisma.product, 'findUnique').mockResolvedValue(null);
+      await expect(service.encryptSource('p-x')).rejects.toThrow(NotFoundException);
+    });
+
+    it('throw NotFound nếu product không có fileKey', async () => {
+      jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({
+        id: 'p-1',
+        fileKey: null,
+      } as any);
+      await expect(service.encryptSource('p-1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('idempotent: fileKey đã endsWith(".enc") → trả sớm, không gọi storage', async () => {
+      jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({
+        id: 'p-1',
+        fileKey: 'products/p-1/source.zip.enc',
+      } as any);
+
+      const result = await service.encryptSource('p-1');
+
+      expect(result.encrypted).toBe(true);
+      expect(storage.getObjectBuffer).not.toHaveBeenCalled();
+      expect(encryption.encrypt).not.toHaveBeenCalled();
+      expect(storage.putObjectBuffer).not.toHaveBeenCalled();
+      expect(prisma.product.update).not.toHaveBeenCalled();
+    });
+
+    it('happy path: đọc buffer → encrypt → putObjectBuffer key+".enc" → update fileKey', async () => {
+      jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({
+        id: 'p-1',
+        fileKey: 'products/p-1/source.zip',
+      } as any);
+      const plain = Buffer.from('plain-source');
+      const encrypted = Buffer.from('encrypted-source');
+      jest.spyOn(storage, 'getObjectBuffer').mockResolvedValue(plain);
+      jest.spyOn(encryption, 'encrypt').mockReturnValue(encrypted);
+      jest.spyOn(storage, 'putObjectBuffer').mockResolvedValue(undefined);
+      jest.spyOn(prisma.product, 'update').mockResolvedValue({
+        id: 'p-1',
+        fileKey: 'products/p-1/source.zip.enc',
+      } as any);
+
+      const result = await service.encryptSource('p-1');
+
+      expect(storage.getObjectBuffer).toHaveBeenCalledWith('products/p-1/source.zip');
+      expect(encryption.encrypt).toHaveBeenCalledWith(plain);
+      expect(storage.putObjectBuffer).toHaveBeenCalledWith(
+        'products/p-1/source.zip.enc',
+        encrypted,
+        'application/octet-stream',
+      );
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: 'p-1' },
+        data: { fileKey: 'products/p-1/source.zip.enc' },
+      });
+      expect(result.fileKey).toBe('products/p-1/source.zip.enc');
+      expect(result.encrypted).toBe(true);
     });
   });
 });

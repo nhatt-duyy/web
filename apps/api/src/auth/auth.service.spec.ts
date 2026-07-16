@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../database/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { EmailService } from '../common/email/email.service';
+import { AuditService } from '../audit/audit.service';
 import { UnauthorizedException } from '@nestjs/common';
 
 describe('AuthService', () => {
@@ -17,6 +18,7 @@ describe('AuthService', () => {
   } as any;
   const mockJwtService = { sign: jest.fn().mockReturnValue('token') };
   const mockEmailService = { sendResetPasswordEmail: jest.fn(), sendVerificationEmail: jest.fn() };
+  const mockAuditService = { log: jest.fn().mockResolvedValue(undefined) };
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -25,6 +27,7 @@ describe('AuthService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwtService },
         { provide: EmailService, useValue: mockEmailService },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
     service = module.get(AuthService);

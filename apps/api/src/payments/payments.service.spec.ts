@@ -3,6 +3,8 @@ import { PaymentsService } from './payments.service';
 import { ConfigService } from '@nestjs/config';
 import { OrdersService } from '../orders/orders.service';
 import { EmailService } from '../common/email/email.service';
+import { PrismaService } from '../database/prisma.service';
+import { CustomProjectsService } from '../custom-projects/custom-projects.service';
 
 describe('PaymentsService', () => {
   let service: PaymentsService;
@@ -34,6 +36,8 @@ describe('PaymentsService', () => {
         { provide: ConfigService, useValue: configService },
         { provide: OrdersService, useValue: ordersService },
         { provide: EmailService, useValue: { sendPaymentSuccess: jest.fn() } },
+        { provide: PrismaService, useValue: {} },
+        { provide: CustomProjectsService, useValue: {} },
       ],
     }).compile();
 
