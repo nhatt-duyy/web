@@ -77,6 +77,13 @@ model User {
   tickets      Ticket[]             // ticket do user này gửi
   assignedTickets Ticket[] @relation("TicketAssignee") // ticket được gán cho user này (STAFF/ADMIN)
   posts        Post[]              // bài viết do user này viết (CMS Phase 3)
+  // --- Phase 4: Custom Service ---
+  customRequests   CustomProjectRequest[]        // yêu cầu báo giá do user gửi
+  customerProjects CustomProject[]       @relation("CustomerProject") // dự án là khách hàng
+  assignedProjects CustomProject[]       @relation("ProjectAssignee")  // dự án được gán (STAFF/ADMIN)
+  projectMessages  ProjectMessage[]               // tin nhắn đã gửi trong dự án
+  projectFiles     ProjectFile[]                  // file đã upload trong dự án
+  payments         Payment[]                      // lịch sử thanh toán (Phase 1 Order + Phase 4 Milestone)
 }
 
 model Category {
@@ -241,4 +248,167 @@ model Post {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   @@index([type, status, publishedAt])
+}
+
+// =================== PHASE 4 — MODULE DỊCH VỤ CUSTOM ===================
+
+// Trạng thái dự án custom (Kanban pipeline)
+enum ProjectStatus {
+  NEW         // yêu cầu mới tiếp nhận
+  QUOTING     // đang báo giá
+  CONFIRMED   // khách đã chốt & ký scope
+  IN_PROGRESS // đang phát triển
+  REVIEW      // chờ khách review
+  DELIVERED   // đã bàn giao
+  WARRANTY    // đang bảo hành
+  CANCELLED   // hủy (đóng board)
+}
+
+// Loại dự án custom (phân loại yêu cầu)
+enum ProjectType {
+  WEB_APP
+  MOBILE_APP
+  DESKTOP_APP
+  EXTENSION
+  INTEGRATION
+  OTHER
+}
+
+// Loại file trong dự án
+enum ProjectFileKind {
+  REQUEST_ATTACHMENT // file khách gửi lúc yêu cầu
+  DELIVERABLE        // file bàn giao (có version)
+  MESSAGE_ATTACHMENT // file đính kèm trong chat
+}
+
+// Trạng thái milestone thanh toán
+enum MilestoneStatus {
+  PENDING   // chưa đến hạn/đợi
+  INVOICED  // đã xuất link chờ thu
+  PAID      // đã thu tiền
+  SKIPPED   // bỏ qua
+}
+
+// 1) Yêu cầu báo giá từ khách (form public, không cần login)
+model CustomProjectRequest {
+  id          String       @id @default(cuid())
+  userId      String?      // nullable: khách vãng lai chưa login vẫn gửi được
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        ProjectType  // loại dự án
+  title       String       // tiêu đề yêu cầu
+  description String       // mô tả chi tiết nhu cầu
+  budget      Int?         // ngân sách dự kiến VND, nullable nếu "thỏa thuận"
+  deadline    DateTime?    // hạn mong muốn bàn giao
+  contactName String?      // tên liên hệ (khách vãng lai)
+  contactEmail String?     // email liên hệ (khách vãng lai)
+  status      ProjectStatus @default(NEW)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  project     CustomProject? // 1 request -> 0..1 project (kế thừa khi tiếp nhận)
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+}
+
+// 2) Dự án custom đã tiếp nhận (Kanban)
+model CustomProject {
+  id              String       @id @default(cuid())
+  requestId       String       @unique // liên kết 1-1 với request gốc
+  request         CustomProjectRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  userId          String       // khách hàng (snap từ request để query nhanh)
+  user            User         @relation("CustomerProject", fields: [userId], references: [id], onDelete: Cascade)
+  assigneeId      String?      // nhân viên phụ trách (STAFF/ADMIN)
+  assignee        User?        @relation("ProjectAssignee", fields: [assigneeId], references: [id])
+  title           String
+  description      String?
+  status          ProjectStatus @default(NEW)
+  quotedAmount     Int?         // tổng giá báo (VND)
+  contractKey      String?      // key hợp đồng PDF trên R2 (nếu có)
+  contractSignedAt DateTime?    // thời điểm khách xác nhận scope
+  priority         TicketPriority @default(MEDIUM) // ưu tiên (tái dùng enum TicketPriority)
+  warrantyMonths   Int          @default(3) // thời hạn bảo hành (tháng) — chốt 3
+  warrantyEndAt    DateTime?    // ngày kết thúc bảo hành (tính từ DELIVERED)
+  isShowcase       Boolean      @default(false) // hiện trên /du-an (portfolio)
+  slug             String?      @unique // slug cho portfolio detail
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  milestones       Milestone[]
+  messages         ProjectMessage[]
+  files            ProjectFile[]
+  @@index([status])
+  @@index([assigneeId])
+  @@index([userId])
+  @@index([slug])
+}
+
+// 3) Milestone thanh toán theo giai đoạn
+model Milestone {
+  id          String          @id @default(cuid())
+  projectId   String
+  project     CustomProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String          // tên giai đoạn (VD: Đặt cọc 30%)
+  description String?
+  amount      Int             // số tiền VND
+  percent     Int?            // tỷ lệ % (validate tổng = 100)
+  dueDate     DateTime?       // hạn thanh toán
+  status      MilestoneStatus @default(PENDING)
+  paidAt      DateTime?       // thời điểm thu tiền
+  sortOrder   Int             @default(0) // thứ tự milestone
+  paymentId   String?         @unique
+  payment     Payment?        @relation(fields: [paymentId], references: [id])
+  createdAt   DateTime        @default(now())
+  @@index([projectId])
+  @@index([status])
+}
+
+// 4) Trao đổi khách <-> admin
+model ProjectMessage {
+  id        String        @id @default(cuid())
+  projectId String
+  project   CustomProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  senderId  String        // người gửi (khách hoặc STAFF/ADMIN)
+  sender    User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content   String        // nội dung tin nhắn
+  isFromStaff Boolean     @default(false) // true nếu do nhân viên gửi
+  createdAt DateTime      @default(now())
+  @@index([projectId, createdAt])
+  @@index([senderId])
+}
+
+// 5) File đính kèm / deliverable có versioning
+model ProjectFile {
+  id         String          @id @default(cuid())
+  projectId  String
+  project    CustomProject   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploaderId String          // người upload
+  uploader   User            @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  kind       ProjectFileKind // loại file
+  name       String          // tên hiển thị
+  fileKey    String          // key trên R2 (S3-compatible)
+  version    Int             @default(1) // version (cho deliverable)
+  size       Int?            // kích thước bytes
+  mimeType   String?         // content-type
+  createdAt  DateTime        @default(now())
+  @@index([projectId, kind])
+  @@index([uploaderId])
+}
+
+// Thanh toán (tạo riêng, tái dùng webhook Phase 1; không phá Order)
+model Payment {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  provider    PaymentProvider
+  providerRef String?         // orderCode PayOS (webhook lookup)
+  amount      Int
+  status      String          @default("PENDING")
+  orderId     String?         // thanh toán Order (Phase 1)
+  milestoneId String?         @unique // thanh toán Milestone (Phase 4)
+  milestone   Milestone?      // back-relation (FK nằm ở Milestone.paymentId)
+  projectId   String?         // denormalized để query công nợ nhanh
+  createdAt   DateTime        @default(now())
+  @@unique([provider, providerRef])
+  @@index([orderId])
+  @@index([milestoneId])
+  @@index([projectId])
 }
