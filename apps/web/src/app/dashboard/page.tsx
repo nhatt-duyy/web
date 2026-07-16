@@ -8,7 +8,14 @@ import Header from '@/components/header';
 import Footer from '@/components/footer';
 import { useApi } from '@/lib/api-client';
 import { Container, Spinner, Badge, EmptyState } from '@/components/ui/primitives';
-import { ShoppingBagIcon, DownloadIcon, MailIcon, LockIcon, TagIcon } from '@/components/ui/icons';
+import { ShoppingBagIcon, DownloadIcon, MailIcon, LockIcon, TagIcon, FolderIcon, ArrowRightIcon } from '@/components/ui/icons';
+import {
+  ProjectStatus,
+  PROJECT_STATUS_LABELS,
+  PROJECT_STATUS_STYLES,
+  formatVnd,
+  MyProject,
+} from '@/lib/custom-projects';
 
 const formatPrice = (price: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
@@ -17,6 +24,7 @@ const TABS = [
   { id: 'licenses', label: 'License & Tải', icon: <LockIcon className="h-4 w-4" /> },
   { id: 'tickets', label: 'Hỗ trợ', icon: <MailIcon className="h-4 w-4" /> },
   { id: 'orders', label: 'Đơn hàng', icon: <ShoppingBagIcon className="h-4 w-4" /> },
+  { id: 'projects', label: 'Dự án của tôi', icon: <FolderIcon className="h-4 w-4" /> },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];
@@ -99,6 +107,9 @@ export default function DashboardPage() {
           </section>
           <section role="tabpanel" hidden={tab !== 'orders'}>
             {tab === 'orders' && <OrdersTab api={api} />}
+          </section>
+          <section role="tabpanel" hidden={tab !== 'projects'}>
+            {tab === 'projects' && <ProjectsTab api={api} session={session} />}
           </section>
         </Container>
       </main>
@@ -466,6 +477,136 @@ function OrdersTab({ api }: { api: ReturnType<typeof useApi> }) {
                 <span className="font-mono text-lg font-bold">{formatPrice(order.total || 0)}</span>
                 <Badge tone={statusTone(order.status)}>{order.status}</Badge>
               </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------------- Tab Dự án của tôi (Phase 4) ---------------- */
+function StatusBadge({ status }: { status: ProjectStatus }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${PROJECT_STATUS_STYLES[status]}`}
+    >
+      {PROJECT_STATUS_LABELS[status]}
+    </span>
+  );
+}
+
+function ProjectsTab({
+  api,
+  session,
+}: {
+  api: ReturnType<typeof useApi>;
+  session: any;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [projects, setProjects] = useState<MyProject[]>([]);
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      const res = await api('/custom-projects/my', { method: 'GET' });
+      const data = await res.json();
+      setProjects(Array.isArray(data) ? data : data.data || []);
+    } catch (err: any) {
+      setError(err.message || 'Không thể tải danh sách dự án');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Spinner className="h-7 w-7" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-danger">{error}</div>;
+  }
+
+  if (projects.length === 0) {
+    return (
+      <EmptyState
+        icon={<FolderIcon className="h-7 w-7" />}
+        title="Chưa có dự án nào"
+        description="Bạn có thể gửi yêu cầu báo giá dịch vụ custom để bắt đầu."
+        action={
+          <Link
+            href="/bao-gia"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 font-semibold text-white transition-all hover:-translate-y-px hover:bg-primary-strong"
+          >
+            Gửi yêu cầu báo giá
+          </Link>
+        }
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {projects.map((p) => {
+        const paid = p.milestones.filter((m) => m.status === 'PAID').reduce((s, m) => s + m.amount, 0);
+        const total = p.milestones.reduce((s, m) => s + m.amount, 0);
+        return (
+          <div
+            key={p.id}
+            className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-border-strong"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <Link
+                  href={`/dashboard/projects/${p.id}`}
+                  className="font-display text-base font-semibold transition-colors hover:text-primary"
+                >
+                  {p.title}
+                </Link>
+                <p className="mt-0.5 text-sm text-muted">
+                  {p.assignee ? `Phụ trách: ${p.assignee.name} · ` : ''}
+                  {formatVnd(p.quotedAmount)}
+                </p>
+              </div>
+              <StatusBadge status={p.status} />
+            </div>
+
+            {p.milestones.length > 0 && (
+              <div className="mt-4">
+                <div className="mb-1 flex items-center justify-between text-xs text-muted">
+                  <span>Tiến độ thanh toán</span>
+                  <span>
+                    {formatVnd(paid)} / {formatVnd(total)}
+                  </span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-border">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${total > 0 ? Math.round((paid / total) * 100) : 0}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="mt-3 flex items-center gap-4 text-xs text-muted">
+              <span>{p._count?.messages ?? 0} tin nhắn</span>
+              <span>{p._count?.files ?? 0} file</span>
+              <Link
+                href={`/dashboard/projects/${p.id}`}
+                className="ml-auto inline-flex items-center gap-1 font-medium text-primary hover:underline"
+              >
+                Chi tiết <ArrowRightIcon className="h-3.5 w-3.5" />
+              </Link>
             </div>
           </div>
         );
