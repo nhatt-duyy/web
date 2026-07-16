@@ -82,4 +82,12 @@ export class ProductsController {
   async remove(@Param('id') id: string) {
     return this.productsService.remove(id);
   }
+
+  // Encrypt job (Phase 5 — M2): mã hóa file source trên R2
+  @Post(':id/encrypt-source')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async encryptSource(@Param('id') id: string) {
+    return this.productsService.encryptSource(id);
+  }
 }

@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../database/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { AuditService } from '../audit/audit.service';
+import { EncryptionService } from '../common/encryption/encryption.service';
 import { isValidLicenseKeyFormat } from './license-key.util';
 
 // Số ngày giữa các lần reset lượt tải
@@ -14,6 +15,7 @@ export class LicensesService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly audit: AuditService,
+    private readonly encryption: EncryptionService,
   ) {}
 
   // Danh sách license của user đang đăng nhập (kèm sản phẩm + gói)
@@ -78,13 +80,16 @@ export class LicensesService {
       throw new NotFoundException('Sản phẩm chưa có file source để tải');
     }
 
-    // Tăng số lượt tải và trả URL đã ký (5 phút hiệu lực)
+    // Tăng số lượt tải
     await this.prisma.license.update({
       where: { id },
       data: { downloadCount: { increment: 1 } },
     });
     const newCount = license.downloadCount + 1;
-    const url = await this.storage.getSignedUrl(license.product.fileKey);
+
+    // Phase 5 — M2: file source đã mã hóa trên R2, backend stream-decrypt.
+    // Trả URL nội bộ thay vì presigned URL thẳng R2 (không lộ file gốc).
+    const streamUrl = `/licenses/${id}/stream`;
 
     // Ghi audit: ai tải license nào của sản phẩm gì
     await this.audit.log({
@@ -96,11 +101,33 @@ export class LicensesService {
     });
 
     return {
-      url,
+      streamUrl,
       downloadCount: newCount,
       downloadLimit: license.downloadLimit,
       resetAt: needsReset ? now : license.downloadResetAt,
     };
+  }
+
+  // Đọc + giải mã file source trả về buffer (dùng cho stream download).
+  async streamDecrypted(userId: string, id: string): Promise<Buffer> {
+    const license = await this.prisma.license.findFirst({
+      where: { id, userId },
+      include: { product: { select: { fileKey: true, title: true } } },
+    });
+    if (!license) throw new NotFoundException('Không tìm thấy license');
+    if (license.status === 'REVOKED') {
+      throw new ForbiddenException('License đã bị thu hồi, không thể tải');
+    }
+    if (!license.product.fileKey) {
+      throw new NotFoundException('Sản phẩm chưa có file source để tải');
+    }
+
+    const blob = await this.storage.getObjectBuffer(license.product.fileKey);
+    // Back-compat: file chưa mã hóa (.enc) thì trả thẳng, ngược lại decrypt.
+    if (license.product.fileKey.endsWith('.enc')) {
+      return this.encryption.decrypt(blob);
+    }
+    return blob;
   }
 
   // Xác minh license key (public API — cho client/3rd-party verify độc lập)

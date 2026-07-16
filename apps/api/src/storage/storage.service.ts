@@ -11,6 +11,7 @@ export class StorageService {
     this.client = new S3Client({
       region: 'auto',
       endpoint: process.env.R2_ENDPOINT,
+      forcePathStyle: true, // cần cho MinIO / R2 bucket path-style
       credentials: {
         accessKeyId: process.env.R2_ACCESS_KEY_ID!,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
@@ -29,6 +30,26 @@ export class StorageService {
 
   async getSignedUrl(key: string, expiresIn = 300): Promise<string> {
     return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), { expiresIn });
+  }
+
+  /** Đọc toàn bộ object từ R2 về Buffer (dùng cho encrypt/decrypt). */
+  async getObjectBuffer(key: string): Promise<Buffer> {
+    const res = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    const bytes = await res.Body!.transformToByteArray();
+    return Buffer.from(bytes);
+  }
+
+  /** Ghi buffer lên R2 (dùng để lưu file đã mã hóa). */
+  async putObjectBuffer(
+    key: string,
+    body: Buffer,
+    contentType = 'application/octet-stream',
+  ): Promise<void> {
+    await this.client.send(
+      new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: body, ContentType: contentType }),
+    );
   }
 
   // Tạo URL đã ký (presigned PUT) để admin upload file trực tiếp lên R2 từ trình duyệt.

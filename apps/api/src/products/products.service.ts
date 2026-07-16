@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { SearchService } from '../search/search.service';
+import { StorageService } from '../storage/storage.service';
+import { EncryptionService } from '../common/encryption/encryption.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
@@ -10,6 +12,8 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly search: SearchService,
+    private readonly storage: StorageService,
+    private readonly encryption: EncryptionService,
   ) {}
 
   async create(dto: CreateProductDto) {
@@ -197,5 +201,33 @@ export class ProductsService {
       throw new NotFoundException(`Không tìm thấy sản phẩm với id "${id}"`);
     }
     throw error;
+  }
+
+  /**
+   * Encrypt job (Phase 5 — M2): đọc file source plaintext từ R2,
+   * mã hóa AES-256-GCM, ghi đè key `.enc`, cập nhật product.fileKey.
+   * Giữ nguyên flow upload (admin vẫn upload presigned PUT), bước này
+   * do admin trigger sau khi upload xong.
+   */
+  async encryptSource(id: string) {
+    const product = await this.prisma.product.findUnique({ where: { id } });
+    if (!product) throw new NotFoundException(`Không tìm thấy sản phẩm với id "${id}"`);
+    if (!product.fileKey) {
+      throw new NotFoundException('Sản phẩm chưa có file source để mã hóa');
+    }
+    if (product.fileKey.endsWith('.enc')) {
+      return { id, fileKey: product.fileKey, encrypted: true, message: 'File đã được mã hóa từ trước' };
+    }
+
+    const plain = await this.storage.getObjectBuffer(product.fileKey);
+    const encrypted = this.encryption.encrypt(plain);
+    const newKey = `${product.fileKey}.enc`;
+    await this.storage.putObjectBuffer(newKey, encrypted, 'application/octet-stream');
+
+    const updated = await this.prisma.product.update({
+      where: { id },
+      data: { fileKey: newKey },
+    });
+    return { id, fileKey: updated.fileKey, encrypted: true, message: 'Đã mã hóa file source' };
   }
 }

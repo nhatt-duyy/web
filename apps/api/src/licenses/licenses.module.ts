@@ -6,9 +6,10 @@ import { LicensesAdminController } from './licenses-admin.controller';
 import { PrismaModule } from '../database/prisma.module';
 import { StorageModule } from '../storage/storage.module';
 import { AuditModule } from '../audit/audit.module';
+import { EncryptionModule } from '../common/encryption/encryption.module';
 
 @Module({
-  imports: [PrismaModule, StorageModule, AuditModule],
+  imports: [PrismaModule, StorageModule, AuditModule, EncryptionModule],
   controllers: [LicensesController, LicensesPublicController, LicensesAdminController],
   providers: [LicensesService],
   exports: [LicensesService],
