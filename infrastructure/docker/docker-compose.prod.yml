@@ -1,0 +1,162 @@
+# ============================================================================
+# docker-compose.prod.yml — Production stack cho Nhat Duy Market
+# Chạy trên VPS (Vultr/DigitalOcean SG). Build context = root monorepo.
+#
+# Cách dùng:
+#   docker compose -f infrastructure/docker/docker-compose.prod.yml --env-file .env.production up -d
+#
+# NOTE: Image được push từ GitHub Actions (GHCR) hoặc build local.
+#       Ở đây dùng build local cho đơn giản; nếu dùng GHCR, thay `build:` bằng `image: ghcr.io/<org>/<svc>:latest`.
+# ============================================================================
+
+services:
+  # ---- Reverse proxy (nginx) ----
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      # Mount Cloudflare Origin Cert (tạo thủ công, KHÔNG commit)
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - web
+      - admin
+      - api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [appnet]
+
+  # ---- Web (Next.js) ----
+  web:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.web
+    environment:
+      NODE_ENV: production
+      # Runtime env — lấy từ .env.production khi chạy compose
+      DATABASE_URL: ${DATABASE_URL}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      WEB_URL: ${WEB_URL}
+      ADMIN_URL: ${ADMIN_URL}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      SENTRY_DSN: ${SENTRY_DSN}
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
+      SOURCE_ENCRYPTION_KEY: ${SOURCE_ENCRYPTION_KEY}
+    expose:
+      - "3000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    networks: [appnet]
+
+  # ---- Admin (SPA nginx) ----
+  admin:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.admin
+    expose:
+      - "80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [appnet]
+
+  # ---- API (NestJS) ----
+  api:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.api
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      API_PORT: "3001"
+      WEB_URL: ${WEB_URL}
+      ADMIN_URL: ${ADMIN_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      SENTRY_DSN: ${SENTRY_DSN}
+      PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID}
+      PAYOS_API_KEY: ${PAYOS_API_KEY}
+      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_BUCKET: ${R2_BUCKET}
+      MEILI_HOST: ${MEILI_HOST}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      SOURCE_ENCRYPTION_KEY: ${SOURCE_ENCRYPTION_KEY}
+    expose:
+      - "3001"
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    networks: [appnet]
+
+  # ---- Postgres ----
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [appnet]
+
+  # ---- MeiliSearch ----
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
+      MEILI_ENV: "production"
+    volumes:
+      - meili_data:/meili_data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7700/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [appnet]
+
+  # ---- Backup volume helper (dùng bởi scripts/backup.sh chạy trên host) ----
+  # (Backup chạy từ host qua docker exec pg_dump, mount volume pgdata)
+
+volumes:
+  pgdata:
+  meili_data:
+
+networks:
+  appnet:
+    driver: bridge

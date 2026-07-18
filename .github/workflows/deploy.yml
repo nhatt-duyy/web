@@ -1,0 +1,168 @@
+# ============================================================================
+# deploy.yml — Deploy pipeline Phase 7
+# Trigger: push main hoặc tag v*
+# Flow: build & test (qua reusable ci.yml) → build+push Docker image GHCR → SSH VPS deploy
+#
+# Secrets cần thiết (GitHub repo Settings > Secrets):
+#   VPS_HOST        IP/domain VPS
+#   VPS_USER        user SSH (ví dụ: deploy)
+#   SSH_KEY         private key (ed25519) dùng để SSH
+#   GHCR_TOKEN      GitHub Personal Access Token (read:packages, write:packages) để push/pull GHCR
+#   DEPLOY_TOKEN    (tùy chọn) token xác thực thêm nếu cần
+# ============================================================================
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_API: ghcr.io/${{ github.repository_owner }}/nhatduy-market-api
+  IMAGE_WEB: ghcr.io/${{ github.repository_owner }}/nhatduy-market-web
+  IMAGE_ADMIN: ghcr.io/${{ github.repository_owner }}/nhatduy-market-admin
+
+jobs:
+  # -------------------------------------------------------------------------
+  # 1) Quality gate — reuse CI (lint, build, test, e2e, lighthouse)
+  #    Nếu CI fail, deploy sẽ không chạy (need: ci)
+  # -------------------------------------------------------------------------
+  ci:
+    name: CI Quality Gate
+    uses: ./.github/workflows/ci.yml
+
+  # -------------------------------------------------------------------------
+  # 2) Build & push images
+  # -------------------------------------------------------------------------
+  build-and-push:
+    name: Build & Push Images
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      api-tag: ${{ steps.meta-api.outputs.version }}
+      web-tag: ${{ steps.meta-web.outputs.version }}
+      admin-tag: ${{ steps.meta-admin.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Docker meta (api)
+        id: meta-api
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_API }}
+          tags: |
+            type=ref,event=tag
+            type=sha,format=long
+
+      - name: Build & push api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.api
+          push: true
+          tags: ${{ steps.meta-api.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Docker meta (web)
+        id: meta-web
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_WEB }}
+          tags: |
+            type=ref,event=tag
+            type=sha,format=long
+
+      - name: Build & push web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.web
+          push: true
+          tags: ${{ steps.meta-web.outputs.tags }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://${{ secrets.VPS_HOST }}/api
+            NEXTAUTH_URL=https://${{ secrets.VPS_HOST }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Docker meta (admin)
+        id: meta-admin
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_ADMIN }}
+          tags: |
+            type=ref,event=tag
+            type=sha,format=long
+
+      - name: Build & push admin
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.admin
+          push: true
+          tags: ${{ steps.meta-admin.outputs.tags }}
+          build-args: |
+            VITE_API_URL=/api
+            VITE_SENTRY_DSN=${{ secrets.SENTRY_DSN_ADMIN }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # -------------------------------------------------------------------------
+  # 3) Deploy lên VPS qua SSH
+  # -------------------------------------------------------------------------
+  deploy:
+    name: Deploy to VPS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/nhatduy-market || { echo "Thư mục /opt/nhatduy-market chưa tồn tại"; exit 1; }
+
+            # Pull image mới nhất (tag theo sha của commit này)
+            echo "Pulling images..."
+            docker compose -f infrastructure/docker/docker-compose.prod.yml pull
+
+            echo "Rolling update..."
+            docker compose -f infrastructure/docker/docker-compose.prod.yml up -d --remove-orphans
+
+            echo "Chờ services khởi động..."
+            sleep 15
+
+            echo "Healthcheck api..."
+            curl -fsS http://localhost:3001/api/health || { echo "API health FAILED"; docker compose -f infrastructure/docker/docker-compose.prod.yml logs api; exit 1; }
+
+            echo "Healthcheck web..."
+            curl -fsS http://localhost:3000/ > /dev/null || { echo "WEB health FAILED"; docker compose -f infrastructure/docker/docker-compose.prod.yml logs web; exit 1; }
+
+            echo "Healthcheck admin..."
+            curl -fsS http://localhost/ > /dev/null || { echo "NGINX/admin health FAILED"; docker compose -f infrastructure/docker/docker-compose.prod.yml logs nginx; exit 1; }
+
+            echo "Deploy thành công ✅"

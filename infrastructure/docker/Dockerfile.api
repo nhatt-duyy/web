@@ -1,8 +1,70 @@
+# ============================================================================
+# Dockerfile.api — NestJS 11 (apps/api) — multi-stage, non-root, healthcheck
+# Build context: root của monorepo (/home/nhatduy/sourceban)
+# Sửa từ bản cũ (FROM node:20-alpine, COPY . ., pnpm install) lên chuẩn production.
+# ============================================================================
+
+# ---- Stage 1: base + deps ----
 FROM node:20-alpine AS base
 RUN corepack enable
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 WORKDIR /app
-COPY . .
-RUN pnpm install --frozen-lockfile
+
+# Copy chỉ những file cần thiết để tận dụng layer cache
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY turbo.json* ./ 2>/dev/null || true
+COPY apps/api/package.json ./apps/api/package.json
+COPY packages/ ./packages/
+
+# Cài dependencies toàn workspace (frozen lockfile để build deterministic)
+RUN --mount=type=cache,id=pnpm-api,target=/pnpm/store \
+    pnpm install --frozen-lockfile || pnpm install
+
+# ---- Stage 2: build ----
+FROM base AS builder
+WORKDIR /app
+# Copy source code (prisma schema/migrations cần cho generate)
+COPY apps/api ./apps/api
+COPY packages ./packages
+# Generate prisma client + build NestJS
+RUN pnpm --filter api exec prisma generate
 RUN pnpm --filter api build
+
+# ---- Stage 3: runner (non-root) ----
+FROM node:20-alpine AS runner
+RUN corepack enable
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+ENV NODE_ENV=production
+
+# Tạo user không phải root
+RUN addgroup -S nodejs && adduser -S nestjs -G nodejs
+
+WORKDIR /app
+
+# Copy chỉ artifacts cần chạy (giảm image size, không mang source dev)
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
+COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+
+# Prisma client cần thiết để chạy migration/seed nếu cần trong runtime
+RUN pnpm --filter api exec prisma generate 2>/dev/null || true
+
+# Chuyển quyền cho user non-root
+RUN chown -R nestjs:nodejs /app
+USER nestjs
+
 EXPOSE 3001
-CMD ["pnpm", "--filter", "api", "start"]
+
+# Healthcheck: gọi endpoint /api/health (đã thêm HealthController ở main.ts bootstrap)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:3001/api/health || exit 1
+
+# Dùng node trực tiếp (không qua pnpm start để tránh overhead shell)
+CMD ["node", "apps/api/dist/main.js"]

@@ -1,5 +1,7 @@
 import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
+  // Bật standalone output để Docker build image nhẹ (dùng trong Dockerfile.web)
+  output: 'standalone',
   transpilePackages: ['@shared/ui'],
   images: {
     // Cho phép next/image tải ảnh từ Cloudflare R2 (và mọi CDN https).

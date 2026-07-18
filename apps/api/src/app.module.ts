@@ -21,6 +21,7 @@ import { UsersModule } from './users/users.module';
 import { PostsModule } from './posts/posts.module';
 import { CustomProjectsModule } from './custom-projects/custom-projects.module';
 import { AuditModule } from './audit/audit.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { AuditModule } from './audit/audit.module';
     PostsModule,
     CustomProjectsModule,
     AuditModule,
+    HealthModule,
   ],
   providers: [
     {
