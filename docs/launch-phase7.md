@@ -66,6 +66,21 @@
 
 ---
 
+## 9. Local test (không có domain — đã test 2026-07-18)
+
+> Chưa có domain thật → test Phase 7 infra trên localhost (WSL Ubuntu). Docker WSL integration **chưa bật** nên chưa chạy được docker-compose.prod (chỉ test syntax + logic).
+
+- [x] **Health endpoint**: `GET /health` (NestJS, KHÔNG prefix `/api`) trả `{"status":"ok","timestamp"}` → 200. ✅
+- [x] **Full stack local**: web :3000 (200) + api :3001 (200) + admin :3002 (200) đều sống.
+- [x] **Web→API proxy**: `web /api/products` → trả data thật ("Booking System") qua Next.js proxy. ✅
+- [x] **Bug fix**: deploy.yml / docker-compose.prod / Dockerfile.api dùng `localhost:3001/api/health` (sai) → sửa thành `localhost:3001/health` (internal). URL public qua nginx/cloudflare vẫn đúng là `/api/health` (nginx strip prefix). ✅
+- [x] **Scripts valid**: `backup.sh`, `rollback.sh` qua `bash -n`; `deploy.yml` + `docker-compose.prod.yml` valid YAML. ✅
+- [ ] **Docker stack**: cần bật Docker WSL integration (Docker Desktop → Settings → Resources → WSL Integration → tick Ubuntu) rồi test `docker compose -f infrastructure/docker/docker-compose.prod.yml up` thực tế.
+- [ ] **Rollback thực tế**: cần Docker + image đã build/push mới test `rollback.sh <tag>` thật (hiện chỉ verify syntax).
+- [ ] **Backup thực tế**: `backup.sh` cần `pg_dump` + cron trên VPS (local chưa chạy vì chưa deploy prod).
+
+---
+
 ## Definition of Done (Phase 7)
 
 > [ ] Tất cả ô trên ✅ → Go-live thành công, hệ thống ổn định 24h đầu.

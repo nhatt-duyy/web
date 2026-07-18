@@ -30,7 +30,7 @@ docker compose -f infrastructure/docker/docker-compose.prod.yml logs -f <service
 ```bash
 docker compose -f ... restart api
 docker compose -f ... logs api --tail 100
-curl -fsS http://localhost:3001/api/health
+curl -fsS http://localhost:3001/health
 ```
 - Nếu DB không connect → check `postgres` health: `docker compose ps postgres`.
 - Nếu thiếu migration → chạy `docker compose exec api pnpm --filter api exec prisma migrate deploy`.

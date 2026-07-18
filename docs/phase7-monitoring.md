@@ -68,7 +68,7 @@ Theo plan gốc là "tuỳ chọn sau". Để Phase 8 nếu cần metric chi ti�
 
 ```bash
 # API health trả ok
-curl http://localhost:3001/api/health
+curl http://localhost:3001/health
 # → {"status":"ok",...}
 
 # Web build với Sentry (set DSN tạm để test)

@@ -62,9 +62,9 @@ USER nestjs
 
 EXPOSE 3001
 
-# Healthcheck: gọi endpoint /api/health (đã thêm HealthController ở main.ts bootstrap)
+# Healthcheck: gọi endpoint /health (đã thêm HealthController ở main.ts bootstrap)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- http://localhost:3001/api/health || exit 1
+  CMD wget -qO- http://localhost:3001/health || exit 1
 
 # Dùng node trực tiếp (không qua pnpm start để tránh overhead shell)
 CMD ["node", "apps/api/dist/main.js"]

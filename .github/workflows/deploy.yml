@@ -157,7 +157,7 @@ jobs:
             sleep 15
 
             echo "Healthcheck api..."
-            curl -fsS http://localhost:3001/api/health || { echo "API health FAILED"; docker compose -f infrastructure/docker/docker-compose.prod.yml logs api; exit 1; }
+            curl -fsS http://localhost:3001/health || { echo "API health FAILED"; docker compose -f infrastructure/docker/docker-compose.prod.yml logs api; exit 1; }
 
             echo "Healthcheck web..."
             curl -fsS http://localhost:3000/ > /dev/null || { echo "WEB health FAILED"; docker compose -f infrastructure/docker/docker-compose.prod.yml logs web; exit 1; }
