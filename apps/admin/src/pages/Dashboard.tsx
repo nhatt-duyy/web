@@ -51,15 +51,14 @@ const RevenueIcon = () => (
 );
 
 /* ============================ Reusable blocks ============================ */
-const KpiCard = ({ icon, label, value, tint }: { icon: React.ReactNode; label: string; value: string; tint: string }) => (
-  <div className="card card-hover relative overflow-hidden p-5">
-    <div className={`pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full ${tint} opacity-30 blur-2xl`} />
-    <div className="relative flex items-center gap-3">
-      <span className="grid h-11 w-11 place-items-center rounded-xl bg-primary-soft text-primary">{icon}</span>
+const KpiCard = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => (
+  <div className="card card-hover p-5">
+    <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
         <p className="truncate text-sm text-muted">{label}</p>
-        <p className="mt-0.5 font-display text-2xl font-bold tracking-tight">{value}</p>
+        <p className="mt-1.5 font-display text-2xl font-bold tracking-tight tabular-nums">{value}</p>
       </div>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border bg-surface-2 text-muted">{icon}</span>
     </div>
   </div>
 );
@@ -106,11 +105,12 @@ const RevenueArea = ({ series }: { series: RevenuePoint[] }) => {
           const ticks = yScale.ticks(4);
           return (
             <svg width={width} height={height} className="overflow-visible">
-              <LinearGradient id="revFill" from="var(--accent)" to="var(--accent)" fromOpacity={0.35} toOpacity={0.02} />
+              {/* Fill mờ nhẹ, nhấn mạnh vào đường line — tránh gradient rực rỡ kiểu template. */}
+              <LinearGradient id="revFill" from="var(--primary)" to="var(--primary)" fromOpacity={0.12} toOpacity={0} />
               <g transform={`translate(${margin.left},${margin.top})`}>
                 {ticks.map((t) => (
                   <g key={t} transform={`translate(0,${yScale(t)})`}>
-                    <line x1={0} x2={innerW} stroke="var(--border)" strokeDasharray="3 3" />
+                    <line x1={0} x2={innerW} stroke="var(--border)" />
                     <text x={-10} dy="0.32em" textAnchor="end" className="fill-muted-2" style={{ fontSize: 10 }}>{fmt(t)}</text>
                   </g>
                 ))}
@@ -119,15 +119,13 @@ const RevenueArea = ({ series }: { series: RevenuePoint[] }) => {
                   x={(d) => xScale(parseDate(d.date)) ?? 0}
                   y={(d) => yScale(d.revenue)}
                   yScale={yScale}
-                  stroke="var(--accent)"
-                  strokeWidth={2}
                   fill="url(#revFill)"
                 />
                 <LinePath
                   data={series}
                   x={(d) => xScale(parseDate(d.date)) ?? 0}
                   y={(d) => yScale(d.revenue)}
-                  stroke="var(--accent)"
+                  stroke="var(--primary)"
                   strokeWidth={2}
                 />
                 <text x={innerW} y={innerH + 18} textAnchor="end" className="fill-muted-2" style={{ fontSize: 10 }}>
@@ -235,14 +233,14 @@ const Dashboard = () => {
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight">Tổng quan</h1>
-        <p className="mt-1 text-sm text-muted">Bức tranh toàn cảnh về sản phẩm, đơn hàng và doanh thu.</p>
+        <p className="mt-1 text-sm text-muted">Sản phẩm, đơn hàng và doanh thu của cửa hàng.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard icon={<BoxIcon />} label="Tổng sản phẩm" value={`${overview?.totalProducts ?? 0}`} tint="bg-primary" />
-        <KpiCard icon={<ReceiptIcon />} label="Tổng đơn hàng" value={`${overview?.totalOrders ?? 0}`} tint="bg-accent" />
-        <KpiCard icon={<UsersIcon />} label="Người dùng" value={`${overview?.totalUsers ?? 0}`} tint="bg-primary" />
-        <KpiCard icon={<RevenueIcon />} label="Doanh thu" value={fmt(overview?.totalRevenue ?? 0)} tint="bg-accent" />
+        <KpiCard icon={<BoxIcon />} label="Tổng sản phẩm" value={`${overview?.totalProducts ?? 0}`} />
+        <KpiCard icon={<ReceiptIcon />} label="Tổng đơn hàng" value={`${overview?.totalOrders ?? 0}`} />
+        <KpiCard icon={<UsersIcon />} label="Người dùng" value={`${overview?.totalUsers ?? 0}`} />
+        <KpiCard icon={<RevenueIcon />} label="Doanh thu" value={fmt(overview?.totalRevenue ?? 0)} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

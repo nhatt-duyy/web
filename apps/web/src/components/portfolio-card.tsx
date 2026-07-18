@@ -27,7 +27,7 @@ export default function PortfolioCard({ project }: { project: ShowcaseProject })
     <Link
       href={`/du-an/${project.slug ?? project.id}`}
       aria-label={project.title}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgb(15_23_42/0.04),0_8px_24px_-16px_rgb(15_23_42/0.18)] transition-all duration-300 hover:-translate-y-1 hover:border-border-strong hover:shadow-[0_24px_50px_-28px_rgb(var(--shadow-color)/0.6)]"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgb(15_23_42/0.04),0_8px_24px_-16px_rgb(15_23_42/0.18)] transition-[border-color,box-shadow,background-color] duration-300 hover:border-border-strong hover:bg-surface-2 hover:shadow-[0_18px_40px_-28px_rgb(var(--shadow-color)/0.4)]"
     >
       {/* Thumbnail */}
       <div className="relative aspect-[4/3] overflow-hidden bg-surface-2">

@@ -22,7 +22,7 @@ export default async function BlogPage() {
       <Header />
       <main className="py-10">
         <Container>
-          <SectionHeading eyebrow="Kiến thức & Tin tức" title="Blog Nhat Duy Market" className="mb-8" />
+          <SectionHeading title="Blog Nhat Duy Market" className="mb-8" />
           {posts.length === 0 ? (
             <p className="text-muted">Chưa có bài viết nào.</p>
           ) : (

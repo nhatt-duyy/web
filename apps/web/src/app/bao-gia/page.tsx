@@ -44,7 +44,6 @@ export default function BaoGiaPage() {
             {/* Giới thiệu bên trái */}
             <div className="lg:sticky lg:top-28">
               <SectionHeading
-                eyebrow="Dịch vụ Custom"
                 title="Báo giá dịch vụ phát triển"
                 description="Điền thông tin dự án, đội ngũ Nhat Duy Market sẽ tư vấn giải pháp và gửi báo giá chi tiết. Hoàn toàn miễn phí, không cam kết."
               />

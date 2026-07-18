@@ -42,7 +42,7 @@ export const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
           onClick(project);
         }
       }}
-      className="card cursor-grab p-3.5 text-left transition-shadow hover:shadow-[0_12px_30px_-16px_var(--glow)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary active:cursor-grabbing"
+      className="card card-hover cursor-grab p-3.5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary active:cursor-grabbing"
     >
       <div className="flex items-start justify-between gap-2">
         <p className="font-display text-sm font-semibold leading-snug">{project.title}</p>
@@ -60,7 +60,12 @@ export const ProjectCard = ({ project, onClick }: ProjectCardProps) => {
         {project.deadline && (
           <>
             <span className="text-muted-2">·</span>
-            <span>📅 {formatDate(project.deadline)}</span>
+            <span className="inline-flex items-center gap-1">
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
+              {formatDate(project.deadline)}
+            </span>
           </>
         )}
       </div>

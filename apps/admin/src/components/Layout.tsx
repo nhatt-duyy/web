@@ -1,4 +1,5 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { canAccess } from '../lib/rbac';
 
@@ -59,6 +60,16 @@ const LogoutIcon = () => (
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" />
   </svg>
 );
+const MenuIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 6h16M4 12h16M4 18h16" />
+  </svg>
+);
+const CloseIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 6l12 12M18 6 6 18" />
+  </svg>
+);
 
 const NAV = [
   { to: '/dashboard', label: 'Tổng quan', icon: <GridIcon /> },
@@ -74,68 +85,110 @@ const NAV = [
 
 const Logo = () => (
   <span className="flex items-center gap-2.5 font-display text-lg font-bold">
-    <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-strong text-sm font-bold text-white shadow-[0_8px_20px_-8px_var(--glow)] ring-1 ring-white/10">{'</>'}</span>
-    <span>Source<span className="text-gradient">Ban</span></span>
+    <span className="grid h-8 w-8 place-items-center rounded-lg border border-border-strong bg-surface-2 font-mono text-xs font-bold text-primary">{'</>'}</span>
+    <span>Source<span className="text-primary-strong">Ban</span></span>
   </span>
+);
+
+// Danh sách link điều hướng dùng chung cho sidebar desktop + drawer mobile.
+const NavList = ({ role, onNavigate }: { role?: 'CUSTOMER' | 'STAFF' | 'ADMIN'; onNavigate?: () => void }) => (
+  <nav className="flex-1 space-y-0.5 p-3">
+    {NAV.filter((item) => canAccess(item.to, role)).map((item) => (
+      <NavLink
+        key={item.to}
+        to={item.to}
+        onClick={onNavigate}
+        className={({ isActive }) =>
+          `group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+            isActive
+              ? 'bg-primary-soft text-primary'
+              : 'text-muted hover:bg-surface-2 hover:text-foreground'
+          }`
+        }
+      >
+        {({ isActive }) => (
+          <>
+            <span
+              aria-hidden
+              className={`h-5 w-0.5 shrink-0 rounded-full transition-colors ${
+                isActive ? 'bg-primary' : 'bg-transparent'
+              }`}
+            />
+            {item.icon}
+            {item.label}
+          </>
+        )}
+      </NavLink>
+    ))}
+  </nav>
 );
 
 export const Layout = () => {
   const { user, logout } = useAuth();
   const role = user?.role as 'CUSTOMER' | 'STAFF' | 'ADMIN' | undefined;
   const initials = (user?.name ?? user?.email ?? 'A').slice(0, 1).toUpperCase();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+
+  // Đóng drawer mỗi khi đổi route (mobile).
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      {/* Sidebar */}
-      <aside className="hidden w-64 flex-col border-r border-border bg-surface/60 backdrop-blur md:flex">
+      {/* Sidebar desktop */}
+      <aside className="hidden w-60 flex-col border-r border-border bg-surface md:flex">
         <div className="flex h-16 items-center border-b border-border px-5">
           <Logo />
         </div>
-        <nav className="flex-1 space-y-1 p-3">
-          {NAV.filter((item) => canAccess(item.to, role)).map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-primary-soft text-primary shadow-[inset_2px_0_0_0_var(--primary)]'
-                    : 'text-muted hover:bg-surface-2 hover:text-foreground'
-                }`
-              }
-            >
-              {item.icon}
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
+        <NavList role={role} />
         <div className="border-t border-border p-4 text-xs text-muted-2">© 2026 SourceBan · Admin</div>
       </aside>
 
+      {/* Drawer mobile */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute left-0 top-0 flex h-full w-64 flex-col border-r border-border bg-surface">
+            <div className="flex h-16 items-center justify-between border-b border-border px-5">
+              <Logo />
+              <button onClick={() => setMobileOpen(false)} className="chip !px-2" aria-label="Đóng menu">
+                <CloseIcon />
+              </button>
+            </div>
+            <NavList role={role} onNavigate={() => setMobileOpen(false)} />
+            <div className="border-t border-border p-4 text-xs text-muted-2">© 2026 SourceBan · Admin</div>
+          </aside>
+        </div>
+      )}
+
       {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b border-border bg-surface/70 px-5 backdrop-blur">
-          <div className="md:hidden">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border bg-surface/85 px-4 backdrop-blur sm:px-5">
+          <div className="flex items-center gap-3 md:hidden">
+            <button onClick={() => setMobileOpen(true)} className="chip !px-2" aria-label="Mở menu">
+              <MenuIcon />
+            </button>
             <Logo />
           </div>
           <div className="ml-auto flex items-center gap-3">
-            <div className="text-right">
+            <div className="hidden text-right sm:block">
               <p className="text-sm font-semibold leading-none">{user?.name ?? 'Admin'}</p>
               <p className="mt-1 text-xs text-muted-2">{user?.email}</p>
             </div>
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-primary-soft text-sm font-bold text-primary">
+            <span className="grid h-9 w-9 place-items-center rounded-full border border-border-strong bg-surface-2 text-sm font-bold text-primary">
               {initials}
             </span>
             <button onClick={logout} className="chip">
               <LogoutIcon />
-              Đăng xuất
+              <span className="hidden sm:inline">Đăng xuất</span>
             </button>
           </div>
         </header>
 
-        <main className="relative flex-1 overflow-y-auto">
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-grid opacity-50" />
-          <div className="relative mx-auto max-w-7xl animate-fade-in p-6">
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-7xl animate-fade-in p-4 sm:p-6">
             <Outlet />
           </div>
         </main>

@@ -34,7 +34,7 @@ function Logo() {
         {'</>'}
       </span>
       <span>
-        Source<span className="text-gradient">Ban</span>
+        Source<span className="text-primary">Ban</span>
       </span>
     </Link>
   );

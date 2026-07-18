@@ -168,12 +168,12 @@ const Posts = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Bài viết & Trang</h1>
-          <p className="text-sm text-muted">Quản lý blog và trang tĩnh (CMS)</p>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Bài viết &amp; Trang</h1>
+          <p className="mt-1 text-sm text-muted">Quản lý blog và trang tĩnh (CMS)</p>
         </div>
-        <button className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm" onClick={openCreate}>
+        <button className="btn-primary" onClick={openCreate}>
           <PlusIcon /> Viết mới
         </button>
       </div>
@@ -192,9 +192,10 @@ const Posts = () => {
       )}
 
       <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left text-muted">
+            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-2">
               <th className="px-4 py-3 font-medium">Tiêu đề</th>
               <th className="px-4 py-3 font-medium">Loại</th>
               <th className="px-4 py-3 font-medium">Trạng thái</th>
@@ -245,6 +246,7 @@ const Posts = () => {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {showEditor && editing && (

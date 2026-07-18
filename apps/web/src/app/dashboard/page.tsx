@@ -74,10 +74,21 @@ export default function DashboardPage() {
             <span className="text-foreground">Tài khoản</span>
           </nav>
 
-          <h1 className="mb-2 text-3xl font-bold tracking-tight sm:text-4xl">Bảng điều khiển</h1>
-          <p className="mb-8 text-muted">Quản lý license, yêu cầu hỗ trợ và lịch sử đơn hàng.</p>
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Bảng điều khiển</h1>
+              <p className="mt-2 text-muted">
+                {session.user?.name ? `Xin chào, ${session.user.name}. ` : ''}Quản lý license, yêu cầu hỗ trợ và lịch sử đơn hàng.
+              </p>
+            </div>
+            <p className="text-sm text-muted-2">{session.user?.email}</p>
+          </div>
 
-          <div role="tablist" aria-label="Bảng điều khiển" className="mb-8 flex gap-2 border-b border-border">
+          <div
+            role="tablist"
+            aria-label="Bảng điều khiển"
+            className="mb-8 flex flex-wrap gap-1 border-b border-border"
+          >
             {TABS.map((t) => {
               const active = tab === t.id;
               return (
@@ -86,14 +97,14 @@ export default function DashboardPage() {
                   role="tab"
                   aria-selected={active}
                   onClick={() => setTab(t.id)}
-                  className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium transition-colors sm:px-4 ${
                     active
                       ? 'border-primary text-primary'
                       : 'border-transparent text-muted hover:text-foreground'
                   }`}
                 >
                   {t.icon}
-                  {t.label}
+                  <span className="hidden sm:inline">{t.label}</span>
                 </button>
               );
             })}
@@ -184,7 +195,7 @@ function LicensesTab({ api }: { api: ReturnType<typeof useApi> }) {
         action={
           <Link
             href="/products"
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 font-semibold text-white transition-all hover:-translate-y-px hover:bg-primary-strong"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 font-semibold text-white transition-colors hover:bg-primary-strong"
           >
             Khám phá sản phẩm
           </Link>
@@ -201,7 +212,7 @@ function LicensesTab({ api }: { api: ReturnType<typeof useApi> }) {
         return (
           <div
             key={l.id}
-            className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-border-strong"
+            className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-border-strong hover:bg-surface-2"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -214,7 +225,7 @@ function LicensesTab({ api }: { api: ReturnType<typeof useApi> }) {
               <button
                 onClick={() => handleDownload(l.id)}
                 disabled={!canDownload || busyId === l.id}
-                className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition-all hover:-translate-y-px hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <DownloadIcon className="h-4 w-4" />
                 {busyId === l.id ? 'Đang tải...' : canDownload ? 'Tải source' : 'Hết lượt'}
@@ -351,7 +362,7 @@ function TicketsTab({ api }: { api: ReturnType<typeof useApi> }) {
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition-all hover:-translate-y-px hover:bg-primary-strong disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-primary-strong disabled:opacity-50"
           >
             <TagIcon className="h-4 w-4" />
             {submitting ? 'Đang gửi...' : 'Gửi yêu cầu'}
@@ -439,7 +450,7 @@ function OrdersTab({ api }: { api: ReturnType<typeof useApi> }) {
         action={
           <Link
             href="/products"
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 font-semibold text-white transition-all hover:-translate-y-px hover:bg-primary-strong"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 font-semibold text-white transition-colors hover:bg-primary-strong"
           >
             Khám phá sản phẩm
           </Link>
@@ -463,7 +474,7 @@ function OrdersTab({ api }: { api: ReturnType<typeof useApi> }) {
         return (
           <div
             key={order.id}
-            className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-border-strong"
+            className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-border-strong hover:bg-surface-2"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -546,7 +557,7 @@ function ProjectsTab({
         action={
           <Link
             href="/bao-gia"
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 font-semibold text-white transition-all hover:-translate-y-px hover:bg-primary-strong"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-5 font-semibold text-white transition-colors hover:bg-primary-strong"
           >
             Gửi yêu cầu báo giá
           </Link>
@@ -563,7 +574,7 @@ function ProjectsTab({
         return (
           <div
             key={p.id}
-            className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-border-strong"
+            className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-border-strong hover:bg-surface-2"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>

@@ -22,6 +22,7 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [oauthBusy, setOauthBusy] = useState<'google' | 'github' | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,10 +38,15 @@ function LoginForm() {
     router.refresh();
   };
 
-  const handleOAuth = (provider: 'google' | 'github') => signIn(provider, { callbackUrl });
+  const handleOAuth = (provider: 'google' | 'github') => {
+    setOauthBusy(provider);
+    signIn(provider, { callbackUrl });
+  };
+
+  const busy = loading || oauthBusy !== null;
 
   return (
-    <div className="rounded-2xl border border-border bg-surface/70 p-7 shadow-[var(--shadow-card)] backdrop-blur sm:p-8">
+    <div className="rounded-2xl border border-border bg-surface p-7 shadow-[var(--shadow-card)] sm:p-8">
       <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Đăng nhập</h1>
       <p className="mt-2 text-sm text-muted">Chào mừng trở lại! Đăng nhập để tiếp tục mua sắm.</p>
 
@@ -48,16 +54,18 @@ function LoginForm() {
         <button
           type="button"
           onClick={() => handleOAuth('google')}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary-soft"
+          disabled={busy}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary-soft focus-visible:border-primary active:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <GoogleIcon className="h-5 w-5" /> Google
+          {oauthBusy === 'google' ? <Spinner className="h-4 w-4" /> : <GoogleIcon className="h-5 w-5" />} Google
         </button>
         <button
           type="button"
           onClick={() => handleOAuth('github')}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary-soft"
+          disabled={busy}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary-soft focus-visible:border-primary active:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <GithubIcon className="h-5 w-5" /> GitHub
+          {oauthBusy === 'github' ? <Spinner className="h-4 w-4" /> : <GithubIcon className="h-5 w-5" />} GitHub
         </button>
       </div>
 
@@ -91,7 +99,9 @@ function LoginForm() {
               placeholder="ban@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-10"
+              disabled={busy}
+              aria-invalid={error ? true : undefined}
+              className={`pl-10 disabled:cursor-not-allowed disabled:opacity-60 ${error ? 'border-danger focus:border-danger focus:ring-2 focus:ring-danger/30' : ''}`}
               aria-describedby={error ? 'login-error' : undefined}
             />
           </div>
@@ -111,18 +121,24 @@ function LoginForm() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-10"
+              disabled={busy}
+              aria-invalid={error ? true : undefined}
+              className={`pl-10 disabled:cursor-not-allowed disabled:opacity-60 ${error ? 'border-danger focus:border-danger focus:ring-2 focus:ring-danger/30' : ''}`}
+              aria-describedby={error ? 'login-error' : undefined}
             />
           </div>
         </div>
 
         <button
           type="submit"
-          disabled={loading}
-          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 text-base font-semibold text-white shadow-[0_12px_30px_-12px_var(--glow)] transition-all hover:-translate-y-px hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
+          disabled={busy}
+          aria-busy={loading}
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 text-base font-semibold text-white transition-colors hover:bg-primary-strong active:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-70"
         >
           {loading ? (
-            <Spinner className="h-5 w-5" />
+            <>
+              <Spinner className="h-5 w-5 text-white" /> Đang đăng nhập…
+            </>
           ) : (
             <>
               Đăng nhập <ArrowRightIcon className="h-5 w-5" />

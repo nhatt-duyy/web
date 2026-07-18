@@ -22,22 +22,31 @@ function RegisterForm() {
   const callbackUrl = params.get('callbackUrl') || '/';
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
   const [loading, setLoading] = useState(false);
+  const [oauthBusy, setOauthBusy] = useState<'google' | 'github' | null>(null);
 
-  const setField = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const setField = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((f) => ({ ...f, [key]: e.target.value }));
+    if (fieldErrors[key]) setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+  };
+
+  const validate = () => {
+    const next: Partial<Record<keyof typeof form, string>> = {};
+    if (!form.name.trim()) next.name = 'Vui lòng nhập họ và tên.';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = 'Email không hợp lệ.';
+    if (form.password.length < 6) next.password = 'Mật khẩu phải có ít nhất 6 ký tự.';
+    if (form.confirm !== form.password) next.confirm = 'Mật khẩu xác nhận không khớp.';
+    return next;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (form.password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự.');
-      return;
-    }
-    if (form.password !== form.confirm) {
-      setError('Mật khẩu xác nhận không khớp.');
-      return;
-    }
+    const next = validate();
+    setFieldErrors(next);
+    if (Object.keys(next).length > 0) return;
+
     setLoading(true);
     try {
       const res = await fetch('/api/register', {
@@ -75,10 +84,15 @@ function RegisterForm() {
     }
   };
 
-  const handleOAuth = (provider: 'google' | 'github') => signIn(provider, { callbackUrl });
+  const handleOAuth = (provider: 'google' | 'github') => {
+    setOauthBusy(provider);
+    signIn(provider, { callbackUrl });
+  };
+
+  const busy = loading || oauthBusy !== null;
 
   return (
-    <div className="rounded-2xl border border-border bg-surface/70 p-7 shadow-[var(--shadow-card)] backdrop-blur sm:p-8">
+    <div className="rounded-2xl border border-border bg-surface p-7 shadow-[var(--shadow-card)] sm:p-8">
       <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Tạo tài khoản</h1>
       <p className="mt-2 text-sm text-muted">Tham gia Nhat Duy Market để tải source code và theo dõi đơn hàng.</p>
 
@@ -86,16 +100,18 @@ function RegisterForm() {
         <button
           type="button"
           onClick={() => handleOAuth('google')}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary-soft"
+          disabled={busy}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary-soft focus-visible:border-primary active:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <GoogleIcon className="h-5 w-5" /> Google
+          {oauthBusy === 'google' ? <Spinner className="h-4 w-4" /> : <GoogleIcon className="h-5 w-5" />} Google
         </button>
         <button
           type="button"
           onClick={() => handleOAuth('github')}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary-soft"
+          disabled={busy}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary-soft focus-visible:border-primary active:bg-primary-soft disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <GithubIcon className="h-5 w-5" /> GitHub
+          {oauthBusy === 'github' ? <Spinner className="h-4 w-4" /> : <GithubIcon className="h-5 w-5" />} GitHub
         </button>
       </div>
 
@@ -129,10 +145,15 @@ function RegisterForm() {
               placeholder="Nguyễn Văn A"
               value={form.name}
               onChange={setField('name')}
-              className="pl-10"
-              aria-describedby={error ? 'register-error' : undefined}
+              disabled={busy}
+              aria-invalid={fieldErrors.name ? true : undefined}
+              aria-describedby={fieldErrors.name ? 'name-error' : error ? 'register-error' : undefined}
+              className={`pl-10 disabled:cursor-not-allowed disabled:opacity-60 ${fieldErrors.name ? 'border-danger focus:border-danger focus:ring-2 focus:ring-danger/30' : ''}`}
             />
           </div>
+          {fieldErrors.name && (
+            <p id="name-error" className="mt-1.5 text-xs text-danger">{fieldErrors.name}</p>
+          )}
         </div>
 
         <div>
@@ -149,9 +170,15 @@ function RegisterForm() {
               placeholder="ban@email.com"
               value={form.email}
               onChange={setField('email')}
-              className="pl-10"
+              disabled={busy}
+              aria-invalid={fieldErrors.email ? true : undefined}
+              aria-describedby={fieldErrors.email ? 'email-error' : error ? 'register-error' : undefined}
+              className={`pl-10 disabled:cursor-not-allowed disabled:opacity-60 ${fieldErrors.email ? 'border-danger focus:border-danger focus:ring-2 focus:ring-danger/30' : ''}`}
             />
           </div>
+          {fieldErrors.email && (
+            <p id="email-error" className="mt-1.5 text-xs text-danger">{fieldErrors.email}</p>
+          )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -169,9 +196,15 @@ function RegisterForm() {
                 placeholder="••••••••"
                 value={form.password}
                 onChange={setField('password')}
-                className="pl-10"
+                disabled={busy}
+                aria-invalid={fieldErrors.password ? true : undefined}
+                aria-describedby={fieldErrors.password ? 'password-error' : undefined}
+                className={`pl-10 disabled:cursor-not-allowed disabled:opacity-60 ${fieldErrors.password ? 'border-danger focus:border-danger focus:ring-2 focus:ring-danger/30' : ''}`}
               />
             </div>
+            {fieldErrors.password && (
+              <p id="password-error" className="mt-1.5 text-xs text-danger">{fieldErrors.password}</p>
+            )}
           </div>
 
           <div>
@@ -188,9 +221,15 @@ function RegisterForm() {
                 placeholder="••••••••"
                 value={form.confirm}
                 onChange={setField('confirm')}
-                className="pl-10"
+                disabled={busy}
+                aria-invalid={fieldErrors.confirm ? true : undefined}
+                aria-describedby={fieldErrors.confirm ? 'confirm-error' : undefined}
+                className={`pl-10 disabled:cursor-not-allowed disabled:opacity-60 ${fieldErrors.confirm ? 'border-danger focus:border-danger focus:ring-2 focus:ring-danger/30' : ''}`}
               />
             </div>
+            {fieldErrors.confirm && (
+              <p id="confirm-error" className="mt-1.5 text-xs text-danger">{fieldErrors.confirm}</p>
+            )}
           </div>
         </div>
 
@@ -201,11 +240,14 @@ function RegisterForm() {
 
         <button
           type="submit"
-          disabled={loading}
-          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 text-base font-semibold text-white shadow-[0_12px_30px_-12px_var(--glow)] transition-all hover:-translate-y-px hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
+          disabled={busy}
+          aria-busy={loading}
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 text-base font-semibold text-white transition-colors hover:bg-primary-strong active:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-70"
         >
           {loading ? (
-            <Spinner className="h-5 w-5" />
+            <>
+              <Spinner className="h-5 w-5 text-white" /> Đang tạo tài khoản…
+            </>
           ) : (
             <>
               Tạo tài khoản <ArrowRightIcon className="h-5 w-5" />

@@ -25,7 +25,12 @@ const statusLabels: Record<Review['status'], string> = {
 };
 
 const Stars = ({ value }: { value: number }) => (
-  <span className="font-mono text-sm text-amber-500">{`${value}/5`}</span>
+  <span className="inline-flex items-center gap-1 font-mono text-sm text-warning">
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="currentColor" aria-hidden>
+      <path d="M12 3l2.6 5.3 5.9.9-4.2 4.1 1 5.8L12 17l-5.3 2.1 1-5.8L3.5 9.2l5.9-.9L12 3Z" />
+    </svg>
+    {value}/5
+  </span>
 );
 
 const Filters = [
