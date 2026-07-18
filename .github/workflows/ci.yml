@@ -82,3 +82,58 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter web build
       - run: pnpm --filter web test
+
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      NEXTAUTH_SECRET: dummy-secret-for-ci-build
+      NEXTAUTH_URL: http://localhost:3000
+      DATABASE_URL: postgresql://dummy:dummy@localhost:5432/sourceban_test?schema=public
+      GOOGLE_CLIENT_ID: dummy-google-client-id
+      GOOGLE_CLIENT_SECRET: dummy-google-client-secret
+      GITHUB_ID: dummy-github-id
+      GITHUB_SECRET: dummy-github-secret
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter web exec playwright install --with-deps chromium
+      - run: pnpm --filter web build
+      - run: pnpm --filter web e2e:ci
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    needs: build
+    env:
+      NEXTAUTH_SECRET: dummy-secret-for-ci-build
+      NEXTAUTH_URL: http://localhost:3000
+      DATABASE_URL: postgresql://dummy:dummy@localhost:5432/sourceban_test?schema=public
+      GOOGLE_CLIENT_ID: dummy-google-client-id
+      GOOGLE_CLIENT_SECRET: dummy-google-client-secret
+      GITHUB_ID: dummy-github-id
+      GITHUB_SECRET: dummy-github-secret
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter web build
+      - run: pnpm --filter web exec playwright install chromium
+      - name: Khởi động web server nền
+        run: pnpm --filter web start &
+      - name: Chờ web sẵn sàng
+        run: npx wait-on http://localhost:3000
+      - run: pnpm --filter web lhci
