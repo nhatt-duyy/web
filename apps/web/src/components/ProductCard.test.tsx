@@ -46,4 +46,17 @@ describe('ProductCard', () => {
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
+
+  it('vẫn render đúng khi isPublished=false (draft)', () => {
+    const draft = { ...mockProduct, isPublished: false };
+    render(<ProductCard product={draft} />);
+    expect(screen.getByText('Demo Source Code Next.js')).toBeInTheDocument();
+    expect(screen.getByText('250.000 ₫')).toBeInTheDocument();
+  });
+
+  it('hiển thị placeholder khi không có thumbnail', () => {
+    const noThumb = { ...mockProduct, thumbnail: null };
+    render(<ProductCard product={noThumb} />);
+    expect(screen.getByText('Không có ảnh')).toBeInTheDocument();
+  });
 });

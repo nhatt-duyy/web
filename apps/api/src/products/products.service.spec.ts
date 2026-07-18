@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ProductsService } from './products.service';
 import { PrismaService } from '../database/prisma.service';
 import { SearchService } from '../search/search.service';
@@ -8,9 +9,10 @@ import { EncryptionService } from '../common/encryption/encryption.service';
 
 describe('ProductsService', () => {
   let service: ProductsService;
-  let prisma: PrismaService;
+  let prisma: any;
   let storage: StorageService;
   let encryption: EncryptionService;
+  let search: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -22,10 +24,15 @@ describe('ProductsService', () => {
             product: {
               create: jest.fn(),
               findMany: jest.fn(),
+              findFirst: jest.fn(),
               count: jest.fn(),
               findUnique: jest.fn(),
               update: jest.fn(),
               delete: jest.fn(),
+            },
+            licenseTier: {
+              deleteMany: jest.fn(),
+              createMany: jest.fn(),
             },
             $transaction: jest.fn(),
           },
@@ -58,9 +65,10 @@ describe('ProductsService', () => {
     }).compile();
 
     service = module.get<ProductsService>(ProductsService);
-    prisma = module.get<PrismaService>(PrismaService);
+    prisma = module.get<PrismaService>(PrismaService) as any;
     storage = module.get<StorageService>(StorageService);
     encryption = module.get<EncryptionService>(EncryptionService);
+    search = module.get<SearchService>(SearchService) as any;
   });
 
   it('should be defined', () => {
@@ -206,6 +214,111 @@ describe('ProductsService', () => {
           isPublished: true,
         },
       });
+    });
+  });
+
+  describe('generateSlug (private)', () => {
+    it('lowercase + dash, giữ nguyên ký tự không phải word', () => {
+      expect((service as any).generateSlug('Hoc Lap Trinh Dep!')).toBe('hoc-lap-trinh-dep');
+    });
+    it('trim dash thừa', () => {
+      expect((service as any).generateSlug('  Tieu De  ')).toBe('tieu-de');
+    });
+  });
+
+  describe('findLanguages', () => {
+    it('trả {value,label} đã sort, lọc null', async () => {
+      jest.spyOn(prisma.product, 'findMany').mockResolvedValue([
+        { language: 'javascript' },
+        { language: null },
+        { language: 'react' },
+      ] as any);
+      const res = await service.findLanguages();
+      expect(res).toEqual([
+        { value: 'javascript', label: 'Javascript' },
+        { value: 'react', label: 'React' },
+      ]);
+    });
+  });
+
+  describe('findOne', () => {
+    it('findUnique kèm category + tiers + reviews', async () => {
+      jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 'p-1' } as any);
+      await service.findOne('p-1');
+      expect(prisma.product.findUnique).toHaveBeenCalledWith({
+        where: { id: 'p-1' },
+        include: { category: true, tiers: { orderBy: { sortOrder: 'asc' } }, reviews: true },
+      });
+    });
+  });
+
+  describe('findOneBySlug', () => {
+    it('slug không tồn tại → NotFound', async () => {
+      jest.spyOn(prisma.product, 'findFirst').mockResolvedValue(null);
+      await expect(service.findOneBySlug('x')).rejects.toThrow(NotFoundException);
+    });
+    it('trả product publish + review APPROVED', async () => {
+      jest.spyOn(prisma.product, 'findFirst').mockResolvedValue({ id: 'p-1', slug: 'x' } as any);
+      const res = await service.findOneBySlug('x');
+      expect(res.id).toBe('p-1');
+      const arg = prisma.product.findFirst.mock.calls[0][0];
+      expect(arg.where).toEqual({ slug: 'x', isPublished: true });
+      expect(arg.include.reviews.where).toEqual({ status: 'APPROVED' });
+    });
+  });
+
+  describe('getRelated', () => {
+    it('cùng category, loại trừ id hiện tại', async () => {
+      jest.spyOn(prisma.product, 'findMany').mockResolvedValue([{ id: 'p-2' }] as any);
+      await service.getRelated('p-1', 'cat-1', 4);
+      const arg = (prisma.product.findMany as jest.Mock).mock.calls[0][0];
+      expect(arg.where).toEqual({ categoryId: 'cat-1', isPublished: true, NOT: { id: 'p-1' } });
+      expect(arg.take).toBe(4);
+    });
+  });
+
+  describe('update', () => {
+    it('đổi slug khi có title mới', async () => {
+      jest.spyOn(prisma.product, 'update').mockResolvedValue({ id: 'p-1' } as any);
+      await service.update('p-1', { title: 'Tiêu đề mới' } as any);
+      expect(prisma.product.update).toHaveBeenCalledWith({
+        where: { id: 'p-1' },
+        data: expect.objectContaining({ slug: 'tiu-mi' }),
+        include: { category: true, tiers: { orderBy: { sortOrder: 'asc' } } },
+      });
+    });
+    it('thay thế tiers (xóa hết + tạo mới) trong transaction', async () => {
+      jest.spyOn(prisma, '$transaction').mockResolvedValue(undefined);
+      jest.spyOn(prisma.product, 'update').mockResolvedValue({ id: 'p-1' } as any);
+      await service.update('p-1', {
+        tiers: [{ name: 'Extended', slug: 'extended', price: 99, sortOrder: 1 }],
+      } as any);
+      expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Array));
+      const tx = prisma.$transaction.mock.calls[0][0] as any[];
+      expect(tx).toHaveLength(2);
+      expect(prisma.licenseTier.deleteMany).toHaveBeenCalledWith({ where: { productId: 'p-1' } });
+      expect(prisma.licenseTier.createMany).toHaveBeenCalled();
+      const created = prisma.licenseTier.createMany.mock.calls[0][0].data[0];
+      expect(created.name).toBe('Extended');
+    });
+    it('lỗi P2025 → NotFound', async () => {
+      const err = new Prisma.PrismaClientKnownRequestError('nf', { code: 'P2025', clientVersion: '1' });
+      jest.spyOn(prisma.product, 'update').mockRejectedValue(err);
+      await expect(service.update('px', {} as any)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('remove', () => {
+    it('xóa + removeProduct khỏi search index', async () => {
+      jest.spyOn(prisma.product, 'delete').mockResolvedValue({ id: 'p-1' } as any);
+      await service.remove('p-1');
+      expect(prisma.product.delete).toHaveBeenCalledWith({ where: { id: 'p-1' } });
+      expect((search as any).removeProduct).toHaveBeenCalledWith('p-1');
+    });
+    it('lỗi P2025 → NotFound', async () => {
+      const err = new Prisma.PrismaClientKnownRequestError('nf', { code: 'P2025', clientVersion: '1' });
+      jest.spyOn(prisma.product, 'delete').mockRejectedValue(err);
+      await expect(service.remove('px')).rejects.toThrow(NotFoundException);
     });
   });
 

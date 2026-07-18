@@ -198,6 +198,102 @@ describe('LicensesService (Phase 5)', () => {
     });
   });
 
+  describe('findAllForUser', () => {
+    it('trả license kèm product + tier, sắp xếp mới nhất', async () => {
+      const rows = [{ id: 'lic-1', product: { title: 'A' } }];
+      prisma.license.findMany.mockResolvedValue(rows);
+      const res = await service.findAllForUser('u-1');
+      expect(res).toBe(rows);
+      expect(prisma.license.findMany).toHaveBeenCalledWith({
+        where: { userId: 'u-1' },
+        include: {
+          product: { select: { id: true, title: true, slug: true, thumbnail: true, fileKey: true } },
+          tier: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    });
+  });
+
+  describe('findOneForUser', () => {
+    it('license khác user → NotFound', async () => {
+      prisma.license.findFirst.mockResolvedValue(null);
+      await expect(service.findOneForUser('u-9', 'lic-1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('trả license của đúng user', async () => {
+      const lic = { id: 'lic-1', userId: 'u-1' };
+      prisma.license.findFirst.mockResolvedValue(lic);
+      expect(await service.findOneForUser('u-1', 'lic-1')).toBe(lic);
+    });
+  });
+
+  describe('download', () => {
+    const base = {
+      id: 'lic-1',
+      userId: 'u-1',
+      status: 'ACTIVE',
+      downloadCount: 0,
+      downloadLimit: 5,
+      downloadResetAt: new Date(),
+      product: { fileKey: 'products/p-1/source.zip.enc', title: 'Source A' },
+    };
+
+    it('tạo streamUrl + tăng downloadCount + ghi audit', async () => {
+      prisma.license.findFirst.mockResolvedValue({ ...base });
+      prisma.license.update.mockResolvedValue({});
+      const res = await service.download('u-1', 'lic-1');
+      expect(res.streamUrl).toBe('/licenses/lic-1/stream');
+      expect(res.downloadCount).toBe(1);
+      expect(prisma.license.update).toHaveBeenCalledWith({
+        where: { id: 'lic-1' },
+        data: { downloadCount: { increment: 1 } },
+      });
+      expect(audit.log).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'LICENSE_DOWNLOAD', entity: 'License', entityId: 'lic-1' }),
+      );
+    });
+
+    it('license REVOKED → Forbidden', async () => {
+      prisma.license.findFirst.mockResolvedValue({ ...base, status: 'REVOKED' });
+      await expect(service.download('u-1', 'lic-1')).rejects.toThrow(ForbiddenException);
+    });
+
+    it('hết lượt tải → Forbidden', async () => {
+      prisma.license.findFirst.mockResolvedValue({ ...base, downloadCount: 5, downloadLimit: 5 });
+      await expect(service.download('u-1', 'lic-1')).rejects.toThrow(/hết 5 lượt tải/);
+    });
+
+    it('quá kỳ reset (30 ngày) → reset count về 0 rồi cho tải', async () => {
+      const old = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
+      prisma.license.findFirst.mockResolvedValue({ ...base, downloadCount: 5, downloadResetAt: old });
+      prisma.license.update.mockResolvedValue({});
+      const res = await service.download('u-1', 'lic-1');
+      expect(prisma.license.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'lic-1' }, data: expect.objectContaining({ downloadCount: 0 }) }),
+      );
+      expect(res.downloadCount).toBe(1);
+    });
+
+    it('sản phẩm chưa có fileKey → NotFound', async () => {
+      prisma.license.findFirst.mockResolvedValue({ ...base, product: { fileKey: null } });
+      await expect(service.download('u-1', 'lic-1')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('resetExpiredDownloads', () => {
+    it('updateMany các license quá kỳ 30 ngày', async () => {
+      prisma.license.updateMany.mockResolvedValue({ count: 3 });
+      await service.resetExpiredDownloads();
+      const where = prisma.license.updateMany.mock.calls[0][0].where;
+      expect(where.downloadResetAt.lt).toBeInstanceOf(Date);
+      expect(prisma.license.updateMany.mock.calls[0][0].data).toEqual({
+        downloadCount: 0,
+        downloadResetAt: expect.any(Date),
+      });
+    });
+  });
+
   describe('verifyKey', () => {
     it('key hợp lệ + tồn tại + ACTIVE → valid', async () => {
       prisma.license.findUnique.mockResolvedValue({

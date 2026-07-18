@@ -34,6 +34,59 @@ describe('StorageService', () => {
     jest.clearAllMocks();
   });
 
+  describe('getObjectBuffer', () => {
+    it('gửi GetObjectCommand và trả Buffer từ body', async () => {
+      const bytes = new Uint8Array([1, 2, 3, 4]);
+      const fakeBody = { transformToByteArray: jest.fn().mockResolvedValue(bytes) };
+      mockSend.mockResolvedValue({ Body: fakeBody });
+
+      const buf = await service.getObjectBuffer('products/p-1/source.zip');
+
+      expect(mockSend).toHaveBeenCalledWith(expect.any(GetObjectCommand));
+      expect(buf).toBeInstanceOf(Buffer);
+      expect(Array.from(buf)).toEqual([1, 2, 3, 4]);
+    });
+  });
+
+  describe('putObjectBuffer', () => {
+    it('gửi PutObjectCommand với body Buffer', async () => {
+      const body = Buffer.from('encrypted');
+      await service.putObjectBuffer('products/p-1/source.zip.enc', body);
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      expect(mockSend).toHaveBeenCalledWith(expect.any(PutObjectCommand));
+    });
+
+    it('truyền contentType tuỳ chỉnh', async () => {
+      const body = Buffer.from('x');
+      await service.putObjectBuffer('k', body, 'application/pdf');
+      expect(mockSend).toHaveBeenCalledWith(expect.any(PutObjectCommand));
+    });
+  });
+
+  describe('getPresignedUploadUrl', () => {
+    it('trả presigned PUT URL với expiresIn mặc định', async () => {
+      const url = 'https://r2/put?sig=zzz';
+      mockGetSignedUrl.mockResolvedValue(url);
+      const result = await service.getPresignedUploadUrl('products/p-1/source.zip', 'application/zip');
+      expect(result).toBe(url);
+      expect(mockGetSignedUrl).toHaveBeenCalledWith(
+        expect.any(S3Client),
+        expect.any(PutObjectCommand),
+        { expiresIn: 300 },
+      );
+    });
+
+    it('dùng expiresIn tuỳ chỉnh', async () => {
+      mockGetSignedUrl.mockResolvedValue('https://r2/put?sig=yyy');
+      await service.getPresignedUploadUrl('k', 'application/zip', 60);
+      expect(mockGetSignedUrl).toHaveBeenCalledWith(
+        expect.any(S3Client),
+        expect.any(PutObjectCommand),
+        { expiresIn: 60 },
+      );
+    });
+  });
+
   describe('uploadFile', () => {
     it('should call PutObjectCommand with correct parameters', async () => {
       const key = 'test/file.txt';

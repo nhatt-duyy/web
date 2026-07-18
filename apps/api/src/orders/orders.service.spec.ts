@@ -12,11 +12,12 @@ describe('OrdersService', () => {
   let prisma: PrismaService;
   let emailService: EmailService;
 
-  const mockPrismaService = {
+  const mockPrismaService: any = {
     $transaction: jest.fn(),
     order: {
       create: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       count: jest.fn(),
       update: jest.fn(),
@@ -30,6 +31,9 @@ describe('OrdersService', () => {
     },
     orderItem: {
       createMany: jest.fn(),
+      create: jest.fn(),
+    },
+    license: {
       create: jest.fn(),
     },
   };
@@ -154,6 +158,120 @@ describe('OrdersService', () => {
       await expect(service.create(dto, userId)).rejects.toThrow(
         'Một hoặc nhiều sản phẩm không tồn tại hoặc chưa được công bố',
       );
+    });
+  });
+
+  describe('findMyOrders', () => {
+    it('findMany where userId, sắp xếp mới nhất', async () => {
+      mockPrismaService.order.findMany.mockResolvedValue([{ id: 'order-1' }]);
+      await service.findMyOrders('user-1');
+      expect(mockPrismaService.order.findMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1' },
+        include: { items: { include: { product: true } }, user: true },
+        orderBy: { createdAt: 'desc' },
+      });
+    });
+  });
+
+  describe('findAll', () => {
+    it('phân trang + lọc status qua transaction', async () => {
+      mockPrismaService.$transaction.mockResolvedValue([[{ id: 'o1' }], 1]);
+      const res = await service.findAll({ status: OrderStatus.PAID, page: 2, limit: 5 });
+      expect(res).toEqual({ data: [{ id: 'o1' }], total: 1, page: 2, limit: 5 });
+      const where = mockPrismaService.order.findMany.mock.calls[0][0].where;
+      expect(where.status).toBe(OrderStatus.PAID);
+      expect(mockPrismaService.order.findMany.mock.calls[0][0].skip).toBe(5);
+    });
+  });
+
+  describe('updateStatus', () => {
+    it('order không tồn tại → NotFound', async () => {
+      mockPrismaService.order.findUnique.mockResolvedValue(null);
+      await expect(service.updateStatus('x', OrderStatus.PAID)).rejects.toThrow(NotFoundException);
+    });
+    it('cập nhật status', async () => {
+      mockPrismaService.order.findUnique.mockResolvedValue({ id: 'o1' });
+      mockPrismaService.order.update.mockResolvedValue({ id: 'o1', status: OrderStatus.PAID });
+      const res = await service.updateStatus('o1', OrderStatus.PAID);
+      expect(res.status).toBe(OrderStatus.PAID);
+      expect(mockPrismaService.order.update).toHaveBeenCalledWith({
+        where: { id: 'o1' },
+        data: { status: OrderStatus.PAID },
+      });
+    });
+  });
+
+  describe('setProviderRef', () => {
+    it('update providerRef = String(code)', async () => {
+      mockPrismaService.order.update.mockResolvedValue({});
+      await service.setProviderRef('o1', 12345);
+      expect(mockPrismaService.order.update).toHaveBeenCalledWith({
+        where: { id: 'o1' },
+        data: { providerRef: '12345' },
+      });
+    });
+  });
+
+  describe('confirmPayment', () => {
+    it('order không tồn tại → throw Error', async () => {
+      mockPrismaService.order.findUnique.mockResolvedValue(null);
+      mockPrismaService.$transaction.mockImplementation(async (cb: any) => cb(mockPrismaService));
+      await expect(service.confirmPayment('x')).rejects.toThrow('Order not found');
+    });
+
+    it('PAID + tạo license mỗi item + ghi audit ORDER_PAID', async () => {
+      const order = {
+        id: 'o1',
+        userId: 'u1',
+        items: [{ id: 'i1', productId: 'p1', licenseTierId: null, qty: 1 }],
+      };
+      mockPrismaService.order.findUnique.mockResolvedValue(order);
+      mockPrismaService.order.update.mockResolvedValue({
+        ...order,
+        status: 'PAID',
+        total: 100,
+        items: [{ product: { title: 'P', slug: 'p' } }],
+        licenses: [],
+        user: { id: 'u1' },
+      });
+      mockPrismaService.$transaction.mockImplementation(async (cb: any) => cb(mockPrismaService));
+      const res = await service.confirmPayment('o1');
+      expect(mockPrismaService.license.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: 'u1',
+          orderId: 'o1',
+          orderItemId: 'i1',
+          productId: 'p1',
+          key: expect.any(String),
+          downloadLimit: 5,
+        }),
+      });
+      expect(mockAuditService.log).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'ORDER_PAID', entity: 'Order', entityId: 'o1' }),
+      );
+      expect(res.status).toBe('PAID');
+    });
+
+    it('license trùng (P2002) → bỏ qua, không throw', async () => {
+      const order = { id: 'o1', userId: 'u1', items: [{ id: 'i1', productId: 'p1', licenseTierId: null }] };
+      mockPrismaService.order.findUnique.mockResolvedValue(order);
+      mockPrismaService.order.update.mockResolvedValue({ ...order, status: 'PAID' });
+      const dup: any = new Error('dup');
+      dup.code = 'P2002';
+      mockPrismaService.license.create.mockRejectedValueOnce(dup);
+      mockPrismaService.$transaction.mockImplementation(async (cb: any) => cb(mockPrismaService));
+      await expect(service.confirmPayment('o1')).resolves.toBeDefined();
+    });
+  });
+
+  describe('findByProviderRef', () => {
+    it('findFirst where providerRef = String(code)', async () => {
+      mockPrismaService.order.findFirst.mockResolvedValue({ id: 'o1' });
+      await service.findByProviderRef('999');
+      expect(mockPrismaService.order.findFirst).toHaveBeenCalledWith({
+        where: { providerRef: '999' },
+        include: { items: { include: { product: true } }, user: true },
+      });
     });
   });
 
